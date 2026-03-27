@@ -2240,33 +2240,10 @@ HOW TO RESPOND — read the candidate's last message and do ONE of these:
 6. They give a vague answer → "Too vague. Give me a specific number, drug, and dose."
 7. Their management logically leads to the next data point → reveal it and ask what they do next.
 
-2024–2026 KNOWLEDGE UPDATES — incorporate when relevant:
-
-TIGRIS TRIAL (Lancet Respiratory Medicine, March 2026):
-- PMX hemoadsorption (Polymyxin B, Toraymyxin) for endotoxic septic shock
-- Patient selection: EAA (Endotoxin Activity Assay) 0.60–0.90
-- Phase 3 RCT, n=157, 2:1 randomisation (PMX + standard care vs standard care alone)
-- Primary endpoint (28-day mortality): 95.3% posterior probability of benefit. Adjusted ARR 10.3%, NNT 9.7
-- Secondary endpoint (90-day mortality): 99.4% posterior probability of benefit. Adjusted ARR 15.5%, NNT 6.5
-- Safety: comparable adverse events, no significant difference
-- Status: approved Japan/Europe. FDA PMA submitted 2026 — NOT yet approved USA
-- Key probe: requires EAA testing to identify endotoxaemic subgroup. CRRT does NOT reverse iNOS-mediated vasoplegia — PMX targets a distinct endotoxin-driven pathway
-- Examiner use: challenge candidates on the EAA threshold, NNT vs NNH balance, and why you can't use this in the USA yet
-
-SURVIVING SEPSIS CAMPAIGN — UPDATED ADULT GUIDELINES (2024–2025):
-- New update released post-2021, webcast available via SCCM/ESICM
-- Core Hour-1 bundle unchanged: lactate, cultures, antibiotics, fluids, vasopressors
-- Emphasis added: post-ICU care, shared decision-making with patients/families, physical and cognitive rehabilitation
-- HFNO now recommended over NIV for sepsis-induced hypoxic respiratory failure (improved 90-day survival, lower intubation rates)
-- Balanced crystalloids over normal saline (weak mortality signal maintained)
-- Examiner use: probe on what changed vs 2021 — post-ICU care is the major new emphasis
-
-REFRACTORY SEPTIC SHOCK — SCCM/ESICM JOINT PROJECT:
-- Formal definition project ongoing (2024–2025)
-- Working definition: septic shock persisting despite noradrenaline >0.25 mcg/kg/min + vasopressin 0.03 units/min for >1 hour with lactate >2 or MAP <65
-- Escalation options: methylene blue (iNOS inhibitor, soluble guanylate cyclase target), angiotensin II, hydroxocobalamin
-- Methylene blue dose: 1–2 mg/kg IV bolus, then 0.25–0.5 mg/kg/h. Mechanism: inhibits iNOS → reduces NO-mediated vasodilation. Does NOT clear iNOS (CRRT does not help)
-- Examiner use: ask mechanism of methylene blue, why CRRT doesn't work for vasoplegia, how to define refractory vs just needing dose optimisation
+2024–2026 UPDATES (use when relevant):
+TIGRIS (Lancet Resp Med 2026): PMX hemoadsorption for endotoxic septic shock (EAA 0.60–0.90). NNT 9.7 at 28d, NNT 6.5 at 90d. Approved Japan/Europe, NOT USA yet. Requires EAA testing.
+SSC 2024–2025 update: core bundle unchanged. HFNO now preferred over NIV for sepsis-induced hypoxic respiratory failure. Post-ICU care emphasis added.
+Refractory septic shock: methylene blue 1–2 mg/kg inhibits iNOS (soluble guanylate cyclase target). CRRT does NOT reverse vasoplegia. Angiotensin II and hydroxocobalamin are alternatives.
 
 RULES:
 - Respond only to what was just said. One question or one challenge per response.
@@ -2353,7 +2330,7 @@ export default function App() {
         },
         signal: controller.signal,
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'claude-haiku-4-5-20251001',
           max_tokens: 200,
           stream: true,
           system: systemPrompt,
