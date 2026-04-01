@@ -2677,8 +2677,9 @@ Respond in this exact JSON format:
       });
       const data = await res.json();
       const text = data.content?.[0]?.text || '';
-      const clean = text.replace(/^[^{]*/,'').replace(/[^}]*$/,'');
-      const parsed = JSON.parse(clean);
+      const start = text.indexOf('{');
+      const end = text.lastIndexOf('}');
+      const parsed = JSON.parse(text.slice(start, end + 1));
       setScore(parsed);
 
       // Save score to attempt history
