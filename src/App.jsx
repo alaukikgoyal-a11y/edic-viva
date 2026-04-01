@@ -2249,7 +2249,9 @@ RULES:
 - Respond only to what was just said. One question or one challenge per response.
 - 2 sentences maximum. Never more. No bullet points. No lists.
 - Never give the answer away. Never correct directly — probe until they get there or reveal they don't know.
-- No encouragement. No preamble. Speak like an examiner.`;
+- No encouragement. No preamble. Speak like an examiner.
+- EVIDENCE DISCIPLINE: Only challenge on findings that are grounded in established guidelines or trials (SSC, ESICM, ERC, BTF, KDIGO, CRASH-2, EOLIA, NICE-SUGAR, RECOVERY, etc.). Do NOT invent thresholds, trials, or recommendations. If uncertain whether evidence supports a point, do not raise it.
+- IF CANDIDATE CORRECTLY CHALLENGES YOU: Acknowledge briefly ("You are correct — that threshold is not guideline-supported.") then immediately pivot to a valid probe. Do not ignore the challenge. Do not repeat the unsupported point.`;
 
 const buildMessages = (msgs) => {
   const out = [];
@@ -2273,8 +2275,177 @@ const persist = (data) => {
   try { window.storage.set('edic_master', JSON.stringify(data)); } catch {}
 };
 
+// ─── ANALYTICS PANEL ─────────────────────────────────────────────────────────
+// EDIC Part 2 CoBaTrICE blueprint weights (CCS stations)
+const BLUEPRINT = {
+  'Sepsis & Circulatory Shock': 20,
+  'Respiratory Failure & ARDS': 15,
+  'Advanced Haemodynamics': 20,
+  'Neurocritical Care': 15,
+  'Cardiac & Post-Arrest Care': 20,
+  'Renal & Fluids': 10,
+  'Trauma & Peri-operative': 10,
+  'Toxicology & Metabolic': 10,
+  'Special Infections': 20,
+  'Weaning & Rehabilitation': 10,
+  'Transport, Organisation & Ethics': 10,
+  'High-Yield Bonus Cases': 15,
+};
+
+function AnalyticsPanel({ getAttempts, rag, cases, C }) {
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const attempts = getAttempts();
+  const ragVals = Object.entries(rag);
+
+  // Domain breakdown
+  const domainStats = {};
+  cases.forEach(c => {
+    const r = rag[String(c.id)];
+    if (!domainStats[c.domain]) domainStats[c.domain] = { total:0, green:0, amber:0, red:0, attempted:0 };
+    domainStats[c.domain].total++;
+    if (r) { domainStats[c.domain].attempted++; domainStats[c.domain][r]++; }
+  });
+
+  const weakDomains = Object.entries(domainStats)
+    .filter(([,s]) => s.attempted > 0)
+    .sort(([,a],[,b]) => (b.red+b.amber) - (a.red+a.amber))
+    .slice(0, 5);
+
+  const totalAttempted = Object.keys(rag).length;
+  const totalGreen = Object.values(rag).filter(v=>v==='green').length;
+  const totalRed = Object.values(rag).filter(v=>v==='red').length;
+  const totalAmber = Object.values(rag).filter(v=>v==='amber').length;
+
+  const generateSummary = async () => {
+    if (totalAttempted === 0) return;
+    setLoading(true);
+    setSummary(null);
+    try {
+      const weakCases = cases.filter(c => rag[String(c.id)] === 'red' || rag[String(c.id)] === 'amber')
+        .map(c => `${c.title} (${c.domain}) — rated ${rag[String(c.id)]}`)
+        .slice(0, 20).join('\n');
+      const strongCases = cases.filter(c => rag[String(c.id)] === 'green')
+        .map(c => c.title).slice(0, 10).join(', ');
+
+      const prompt = `You are an EDIC Part 2 exam coach. Based on this candidate's viva practice data, give a focused study plan.
+
+WEAK/REVIEW CASES (${totalRed + totalAmber} cases):
+${weakCases}
+
+CONFIDENT CASES (${totalGreen} cases): ${strongCases}
+
+Total attempted: ${totalAttempted}/120
+
+Write a concise study plan with:
+1. TOP 3 WEAK DOMAINS — name each and the specific gap to address
+2. KEY TOPICS TO REVISE — 5-7 bullet points of the most high-yield topics from weak cases
+3. EXAM STRATEGY — 2-3 sentences on how to approach the viva given this profile
+4. NEXT CASES — name 3-5 specific cases to attempt next
+
+Be direct and specific. Max 300 words.`;
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 600,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await res.json();
+      setSummary(data.content?.[0]?.text || 'Unable to generate summary.');
+    } catch(e) {
+      setSummary('Error generating summary. Check your API key.');
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      {/* Score overview */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:16 }}>
+        {[
+          { l:'Weak', v:totalRed, c:C.coral },
+          { l:'Review', v:totalAmber, c:C.gold },
+          { l:'Confident', v:totalGreen, c:'#4CAF50' },
+        ].map(({l,v,c}) => (
+          <div key={l} style={{ background:C.card, borderRadius:10, padding:'12px 10px', textAlign:'center', border:`1px solid ${c}40` }}>
+            <div style={{ fontSize:26, fontWeight:'bold', color:c }}>{v}</div>
+            <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{l}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Domain breakdown */}
+      <div style={{ background:C.card, borderRadius:10, padding:14, marginBottom:14 }}>
+        <div style={{ fontWeight:'bold', color:C.teal, fontSize:13, marginBottom:10 }}>DOMAIN PERFORMANCE</div>
+        {Object.entries(domainStats).map(([domain, s]) => {
+          if (s.attempted === 0) return null;
+          const pct = Math.round((s.green / s.attempted) * 100);
+          return (
+            <div key={domain} style={{ marginBottom:8 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, marginBottom:3 }}>
+                <span style={{ color:C.white }}>{domain}</span>
+                <span style={{ color:C.muted }}>
+                  {s.attempted} done · {pct}% confident
+                  {BLUEPRINT[domain] && <span style={{ marginLeft:6, padding:'1px 5px', borderRadius:3, background:'#1A3060', fontSize:9, color:C.teal }}>{BLUEPRINT[domain]}% exam</span>}
+                </span>
+              </div>
+              <div style={{ background:'#1A3060', borderRadius:4, height:6, overflow:'hidden' }}>
+                <div style={{ display:'flex', height:'100%' }}>
+                  <div style={{ width:`${(s.green/s.attempted)*100}%`, background:'#4CAF50' }}/>
+                  <div style={{ width:`${(s.amber/s.attempted)*100}%`, background:C.gold }}/>
+                  <div style={{ width:`${(s.red/s.attempted)*100}%`, background:C.coral }}/>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {Object.values(domainStats).every(s => s.attempted === 0) && (
+          <div style={{ color:C.muted, fontSize:12, textAlign:'center', padding:'10px 0' }}>
+            Complete some cases and rate them to see domain breakdown
+          </div>
+        )}
+      </div>
+
+      {/* AI Study Plan */}
+      <div style={{ background:C.card, borderRadius:10, padding:14 }}>
+        <div style={{ fontWeight:'bold', color:C.teal, fontSize:13, marginBottom:10 }}>AI STUDY PLAN</div>
+        {totalAttempted === 0 ? (
+          <div style={{ color:C.muted, fontSize:12 }}>Complete and rate at least 5 cases to generate a personalised study plan.</div>
+        ) : summary ? (
+          <div style={{ fontSize:12, lineHeight:1.7, color:C.white, whiteSpace:'pre-wrap' }}>{summary}</div>
+        ) : (
+          <button onClick={generateSummary} disabled={loading}
+            style={{ width:'100%', padding:12, borderRadius:8, border:'none', background: loading ? C.card2 : C.teal, color: loading ? C.muted : C.dark, fontWeight:'bold', cursor: loading ? 'default' : 'pointer', fontSize:13 }}>
+            {loading ? 'Generating your study plan...' : '⚡ Generate Personalised Study Plan'}
+          </button>
+        )}
+        {summary && (
+          <button onClick={()=>setSummary(null)} style={{ marginTop:10, width:'100%', padding:8, borderRadius:8, border:`1px solid ${C.muted}40`, background:'transparent', color:C.muted, fontSize:11, cursor:'pointer' }}>
+            Regenerate
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [view, setView]           = useState('dashboard');
+  const [dashTab, setDashTab]     = useState('cases');
+  const [timeLeft, setTimeLeft]   = useState(25 * 60); // 25 min in seconds
+  const [timerActive, setTimerActive] = useState(false);
+  const [score, setScore]         = useState(null);
+  const [scoring, setScoring]     = useState(false);
   const [activeCase, setActive]   = useState(null);
   const [messages, setMessages]   = useState([]);
   const [input, setInput]         = useState('');
@@ -2313,6 +2484,16 @@ export default function App() {
       return next;
     });
   };
+
+  // ── TIMER ─────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!timerActive || timeLeft <= 0) return;
+    const t = setInterval(() => setTimeLeft(s => s - 1), 1000);
+    return () => clearInterval(t);
+  }, [timerActive, timeLeft]);
+
+  const fmtTime = (s) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+  const timerColour = timeLeft <= 120 ? C.coral : timeLeft <= 300 ? C.gold : '#4CAF50';
 
   // ── STREAMING ─────────────────────────────────────────────────────────────
   const runStream = useCallback(async (systemPrompt, apiMsgs, onChunk) => {
@@ -2377,6 +2558,9 @@ export default function App() {
       content: c.stem + '\n\n' + 'Talk me through your immediate priorities.'
     };
     setMessages([openingMsg]);
+    setTimeLeft(25 * 60);
+    setTimerActive(true);
+    setScore(null);
   };
 
   // ── SEND CANDIDATE MESSAGE ─────────────────────────────────────────────────
@@ -2403,6 +2587,114 @@ export default function App() {
 
   const handleKey = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+  };
+
+  // ── ATTEMPT TRANSCRIPT STORAGE (localStorage — persists on Vercel) ──────────
+  const saveAttempt = (caseObj, msgs) => {
+    try {
+      const key = 'edic_attempts';
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      const attempt = {
+        id: caseObj.id,
+        title: caseObj.title,
+        domain: caseObj.domain,
+        difficulty: caseObj.difficulty,
+        timestamp: new Date().toISOString(),
+        rag: progress.rag[String(caseObj.id)] || null,
+        msgCount: msgs.filter(m => m.role === 'candidate').length,
+        // Store condensed transcript — candidate messages only for weak area analysis
+        transcript: msgs.filter(m => m.role === 'candidate').map(m => m.content).join(' | '),
+      };
+      // Keep last 200 attempts
+      const updated = [attempt, ...existing].slice(0, 200);
+      localStorage.setItem(key, JSON.stringify(updated));
+    } catch(e) {}
+  };
+
+  const getAttempts = () => {
+    try { return JSON.parse(localStorage.getItem('edic_attempts') || '[]'); } catch { return []; }
+  };
+
+  // ── AI SCORING ENGINE ────────────────────────────────────────────────────
+  const generateScore = async (caseObj, msgs, timeTaken) => {
+    setScoring(true);
+    setScore(null);
+    try {
+      const transcript = msgs.map(m => `${m.role === 'candidate' ? 'CANDIDATE' : 'EXAMINER'}: ${m.content}`).join('\n');
+      const minutesTaken = Math.round((25*60 - timeTaken) / 60);
+
+      const prompt = `You are an EDIC Part 2 examiner marking a CCS viva. Score this candidate's performance.
+
+CASE: ${caseObj.title} | ${caseObj.domain} | Difficulty: ${caseObj.difficulty}
+TIME USED: approximately ${minutesTaken} minutes of 25 minutes
+
+TRANSCRIPT:
+${transcript}
+
+EXPECTED KNOWLEDGE (pearls): ${(caseObj.pearls||[]).join(' | ')}
+COMMON PITFALLS: ${(caseObj.pitfalls||[]).join(' | ')}
+
+Score the candidate on FOUR DOMAINS used in the real EDIC Part 2 CCS. For each domain give: score (0-3), verdict (Excellent/Satisfactory/Borderline/Unsatisfactory), and one specific sentence of feedback.
+
+DOMAIN 1 — CLINICAL KNOWLEDGE: Correct diagnoses, pathophysiology, guideline-based thresholds and doses
+DOMAIN 2 — MANAGEMENT PRIORITIES: Systematic approach, correct prioritisation, appropriate escalation
+DOMAIN 3 — DECISION-MAKING UNDER UNCERTAINTY: Response to progressive data, challenging scenarios, adapting when challenged
+DOMAIN 4 — PROFESSIONALISM & COMMUNICATION: Structure of answers, use of evidence, handling of uncertainty, ethical reasoning if relevant
+
+Then give:
+OVERALL VERDICT: Pass / Borderline Pass / Borderline Fail / Fail
+PASS MARK RATIONALE: One sentence explaining the overall verdict
+TOP 3 THINGS DONE WELL: Specific bullet points from the transcript
+TOP 3 GAPS TO ADDRESS: Specific knowledge or skill gaps with what to study
+
+Respond in this exact JSON format:
+{
+  "domains": [
+    {"name": "Clinical Knowledge", "score": 0, "verdict": "", "feedback": ""},
+    {"name": "Management Priorities", "score": 0, "verdict": "", "feedback": ""},
+    {"name": "Decision-Making", "score": 0, "verdict": "", "feedback": ""},
+    {"name": "Professionalism", "score": 0, "verdict": "", "feedback": ""}
+  ],
+  "overall": "",
+  "rationale": "",
+  "strengths": ["", "", ""],
+  "gaps": ["", "", ""]
+}`;
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 800,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || '';
+      const clean = text.replace(/^[^{]*/,'').replace(/[^}]*$/,'');
+      const parsed = JSON.parse(clean);
+      setScore(parsed);
+
+      // Save score to attempt history
+      try {
+        const key = 'edic_attempts';
+        const existing = JSON.parse(localStorage.getItem(key) || '[]');
+        if (existing.length > 0 && existing[0].id === caseObj.id) {
+          existing[0].score = parsed;
+          localStorage.setItem(key, JSON.stringify(existing));
+        }
+      } catch(e) {}
+
+    } catch(e) {
+      setScore({ error: 'Scoring failed. Check your answers against the pearls and pitfalls.' });
+    }
+    setScoring(false);
   };
 
   const saveRag = (id, val) => {
@@ -2432,6 +2724,13 @@ export default function App() {
         </div>
       </div>
 
+      {/* Tab Toggle */}
+      <div style={{ display:'flex', gap:8, marginBottom:16 }}>
+        {[['cases','📋 Cases'],['analytics','📊 Analytics']].map(([t,l]) => (
+          <button key={t} onClick={()=>setDashTab(t)} style={{ padding:'7px 18px', borderRadius:7, border:'none', cursor:'pointer', fontSize:13, fontWeight:'bold', background: dashTab===t ? C.teal : C.card2, color: dashTab===t ? C.dark : C.muted }}>{l}</button>
+        ))}
+      </div>
+
       {/* Stats */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:16 }}>
         {[
@@ -2458,7 +2757,9 @@ export default function App() {
         <div style={{ fontSize:10, color:C.muted, marginTop:5 }}>{stats.attempted}/10 attempted · {stats.green + stats.amber + stats.red}/10 rated</div>
       </div>
 
-      {/* Case grid */}
+      {dashTab === 'analytics' ? (
+        <AnalyticsPanel getAttempts={getAttempts} rag={rag} cases={CASES} C={C} />
+      ) : (
       <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12 }}>
         {CASES.map(c => {
           const r = rag[String(c.id)];
@@ -2496,6 +2797,8 @@ export default function App() {
           );
         })}
       </div>
+      </div>
+      )}
       <div style={{ marginTop:18, textAlign:'center', fontSize:11, color:'#2A4070' }}>
         120 Cases · All EDIC Part 2 Domains · Share ↗ to send to colleagues
       </div>
@@ -2514,10 +2817,19 @@ export default function App() {
           <div style={{ fontSize:16, fontWeight:'bold', marginTop:1 }}>{activeCase?.title}</div>
           <div style={{ fontSize:11, color:C.muted }}>{activeCase?.domain}</div>
         </div>
-        <div style={{ display:'flex', gap:8 }}>
+        <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+          <div style={{ textAlign:'center' }}>
+            <div style={{ fontSize:22, fontWeight:'bold', color:timerColour, fontFamily:'monospace' }}>{fmtTime(timeLeft)}</div>
+            <div style={{ fontSize:9, color:C.muted, textTransform:'uppercase', letterSpacing:1 }}>
+              {timeLeft<=0 ? '⏰ TIME UP' : timerActive ? 'remaining' : 'paused'}
+            </div>
+          </div>
+          <button onClick={()=>setTimerActive(t=>!t)} style={{ padding:'4px 10px', borderRadius:6, border:`1px solid ${C.muted}40`, background:'transparent', color:C.muted, fontSize:11, cursor:'pointer' }}>
+            {timerActive ? '⏸' : '▶'}
+          </button>
           <button onClick={() => { abortRef.current?.abort(); setView('dashboard'); }}
             style={{ background:'transparent', color:C.muted, border:`1px solid ${C.muted}40`, padding:'6px 13px', borderRadius:7, cursor:'pointer', fontSize:12 }}>← Dashboard</button>
-          <button onClick={() => { abortRef.current?.abort(); setView('review'); }}
+          <button onClick={() => { abortRef.current?.abort(); saveAttempt(activeCase, messages); setTimerActive(false); const tl = timeLeft; setView('review'); generateScore(activeCase, messages, tl); }}
             style={{ background:C.coral+'22', color:C.coral, border:`1px solid ${C.coral}60`, padding:'6px 13px', borderRadius:7, cursor:'pointer', fontSize:12, fontWeight:'bold' }}>End Viva →</button>
         </div>
       </div>
@@ -2584,6 +2896,68 @@ export default function App() {
         <div style={{ background:C.card, borderRadius:10, padding:16, marginBottom:14 }}>
           <div style={{ fontWeight:'bold', color:C.gold, marginBottom:4, fontSize:14 }}>Self-Assessment</div>
           <div style={{ color:C.muted, fontSize:12, marginBottom:10 }}>Rate your performance. Updates dashboard instantly.</div>
+          {/* ── SCORE PANEL ─────────────────────────────────────── */}
+          {scoring && (
+            <div style={{ background:C.card, borderRadius:10, padding:16, marginBottom:14, textAlign:'center' }}>
+              <div style={{ color:C.teal, fontWeight:'bold', fontSize:13 }}>⚡ Generating your EDIC score...</div>
+              <div style={{ color:C.muted, fontSize:11, marginTop:4 }}>Analysing transcript against CCS marking criteria</div>
+            </div>
+          )}
+          {score && !score.error && (
+            <div style={{ background:C.card, borderRadius:10, padding:16, marginBottom:14 }}>
+              {/* Overall verdict */}
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+                <div style={{ fontWeight:'bold', color:C.teal, fontSize:13, textTransform:'uppercase', letterSpacing:1 }}>EDIC Score Report</div>
+                <div style={{ padding:'4px 14px', borderRadius:20, fontWeight:'bold', fontSize:12,
+                  background: score.overall?.includes('Pass') && !score.overall?.includes('Borderline') ? '#1a3d1a' :
+                              score.overall?.includes('Borderline Pass') ? '#3d3300' :
+                              score.overall?.includes('Borderline Fail') ? '#3d1a00' : '#3d0000',
+                  color: score.overall?.includes('Pass') && !score.overall?.includes('Borderline') ? '#4CAF50' :
+                         score.overall?.includes('Borderline Pass') ? C.gold :
+                         score.overall?.includes('Borderline Fail') ? C.coral : '#FF1744'
+                }}>{score.overall}</div>
+              </div>
+              <div style={{ fontSize:11, color:C.muted, marginBottom:14, fontStyle:'italic' }}>{score.rationale}</div>
+
+              {/* Four domain scores */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
+                {score.domains?.map((d,i) => (
+                  <div key={i} style={{ background:C.card2, borderRadius:8, padding:10 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                      <div style={{ fontSize:10, color:C.muted, textTransform:'uppercase', letterSpacing:0.8 }}>{d.name}</div>
+                      <div style={{ display:'flex', gap:2 }}>
+                        {[0,1,2].map(s => (
+                          <div key={s} style={{ width:8, height:8, borderRadius:2,
+                            background: s < d.score ? (d.score===3 ? '#4CAF50' : d.score===2 ? C.gold : C.coral) : '#2A4070'
+                          }}/>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ fontSize:11, fontWeight:'bold', color:
+                      d.verdict==='Excellent' ? '#4CAF50' : d.verdict==='Satisfactory' ? C.teal :
+                      d.verdict==='Borderline' ? C.gold : C.coral, marginBottom:4 }}>{d.verdict}</div>
+                    <div style={{ fontSize:10, color:C.muted, lineHeight:1.5 }}>{d.feedback}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Strengths and gaps */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                <div style={{ background:'#0d2d0d', borderRadius:8, padding:10 }}>
+                  <div style={{ fontSize:10, color:'#4CAF50', fontWeight:'bold', textTransform:'uppercase', marginBottom:6 }}>✓ Done Well</div>
+                  {score.strengths?.map((s,i) => <div key={i} style={{ fontSize:10, color:C.white, marginBottom:4, lineHeight:1.4 }}>• {s}</div>)}
+                </div>
+                <div style={{ background:'#2d0d0d', borderRadius:8, padding:10 }}>
+                  <div style={{ fontSize:10, color:C.coral, fontWeight:'bold', textTransform:'uppercase', marginBottom:6 }}>⚠ Gaps to Address</div>
+                  {score.gaps?.map((g,i) => <div key={i} style={{ fontSize:10, color:C.white, marginBottom:4, lineHeight:1.4 }}>• {g}</div>)}
+                </div>
+              </div>
+            </div>
+          )}
+          {score?.error && (
+            <div style={{ background:C.card, borderRadius:10, padding:12, marginBottom:14, color:C.muted, fontSize:12 }}>{score.error}</div>
+          )}
+
           <div style={{ display:'flex', gap:9 }}>
             {RAG_OPTIONS.map(r => (
               <button key={r.val} onClick={() => saveRag(activeCase.id, r.val)}
