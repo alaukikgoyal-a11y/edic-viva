@@ -2789,7 +2789,7 @@ Respond in this exact JSON format:
                 <div style={{ marginTop:9, display:'flex', flexWrap:'wrap', gap:4 }}>
                   {c.key_probes.slice(0,3).map((p,i) => (
                     <span key={i} style={{ fontSize:10, color:C.muted, background:C.bg, padding:'2px 6px', borderRadius:3, border:'1px solid #2A4070' }}>
-                      {p.split(' ').slice(0,4).join(' ')}…
+                      {p.split(' ').slice(0,4).join(' ')}...
                     </span>
                   ))}
                 </div>
@@ -2797,7 +2797,6 @@ Respond in this exact JSON format:
             </div>
           );
         })}
-      </div>
       </div>
       )}
       <div style={{ marginTop:18, textAlign:'center', fontSize:11, color:'#2A4070' }}>
