@@ -2272,7 +2272,7 @@ const RAG_OPTIONS = [
 
 // ─── STORAGE HELPER — fire and forget, never blocks UI ──────────────────────
 const persist = (data) => {
-  try { window.storage.set('edic_master', JSON.stringify(data)); } catch {}
+  try { localStorage.setItem('edic_master', JSON.stringify(data)); } catch {}
 };
 
 // ─── ANALYTICS PANEL ─────────────────────────────────────────────────────────
@@ -2372,7 +2372,10 @@ Be direct and specific. Max 300 words.`;
     <div>
       {/* Score overview */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:16 }}>
-        {[
+        <div style={{ fontSize:11, color:C.muted, marginBottom:8 }}>
+        {totalAttempted} cases attempted · {totalGreen+totalAmber+totalRed} rated (use ✓ / ⚠ / ✗ after each case)
+      </div>
+      {[
           { l:'Weak', v:totalRed, c:C.coral },
           { l:'Review', v:totalAmber, c:C.gold },
           { l:'Confident', v:totalGreen, c:'#4CAF50' },
@@ -2459,15 +2462,13 @@ export default function App() {
 
   // Load progress from storage once on mount
   useEffect(() => {
-    (async () => {
-      try {
-        const r = await window.storage.get('edic_master');
-        if (r?.value) {
-          const d = JSON.parse(r.value);
-          setProgress({ rag: d.rag||{}, attempted: d.attempted||{} });
-        }
-      } catch {}
-    })();
+    try {
+      const saved = localStorage.getItem('edic_master');
+      if (saved) {
+        const d = JSON.parse(saved);
+        setProgress({ rag: d.rag||{}, attempted: d.attempted||{} });
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -2693,7 +2694,7 @@ Respond in this exact JSON format:
       } catch(e) {}
 
     } catch(e) {
-      setScore({ error: 'Scoring failed. Check your answers against the pearls and pitfalls.' });
+      setScore({ error: 'Score generation failed: ' + e.message + '. Check pearls and pitfalls below.' });
     }
     setScoring(false);
   };
