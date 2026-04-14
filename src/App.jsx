@@ -1,16 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 const C = {
   bg:'#0D1B3E', card:'#162950', card2:'#1A3060', teal:'#00BCD4',
   gold:'#FFD54F', coral:'#FF5252', green:'#4CAF50', muted:'#8EACC8',
   pearlBg:'#0A3253', dangerBg:'#4A1018', dark:'#081228', white:'#FFFFFF',
 };
-
 const CASES = [
 {
     id:1, title:"Septic Shock + Evolving ARDS", domain:"Sepsis & Circulatory Shock", difficulty:"High",
     stem:`62M, BMI 27, T2DM, COPD FEV1 45%. Three days fever, productive cough, worsening dyspnoea.
-
 ICU ARRIVAL:
 • GCS 13, agitated, accessory muscles
 • RR 32 | SpO2 86% on 15L NRB | HR 118 | BP 82/46 (MAP 58)
@@ -19,7 +16,6 @@ ICU ARRIVAL:
 • UO: 15 mL in 2 hours
 • WBC 18 | Cr 1.9 (base 1.0) | Plt 120 | CRP 280 | PCT 14
 • CXR: RLL consolidation + bilateral patchy infiltrates
-
 ALREADY GIVEN: 20 mL/kg crystalloid, pip-tazo + azithromycin within 1h.`,
     progressive_data:["After bolus + norad started: MAP 62, lactate 5.1, still mottled.","Post-intubation: SpO2 94%, VT 6 mL/kg PBW, PEEP 10, FiO2 0.8. P/F=120. Pplat 28.","Hour 3: Norad 0.6 mcg/kg/min, MAP 60, lactate 5.2, UO 10 mL/h.","Echo: hyperdynamic LV (EF 70%), dilated RV TAPSE 16, IVC collapsing >50%, no tamponade."],
     key_probes:["Structure your immediate priorities — first 5 minutes, in order.","RSI: justify drug choice given this haemodynamic state.","Lung-protective ventilation — exact targets with numbers. Driving pressure is 20 cmH2O.","Hour 3: norad 0.6, MAP 60, lactate 5.2. What next and why?","P/F 120, dilated RV on echo. When do you prone, and does the echo change that decision?"],
@@ -29,7 +25,6 @@ ALREADY GIVEN: 20 mL/kg crystalloid, pip-tazo + azithromycin within 1h.`,
 {
     id:2, title:"Severe ARDS — High Plateau Pressures", domain:"Respiratory Failure & ARDS", difficulty:"High",
     stem:`54F, 165 cm, 95 kg (PBW = 60 kg). Severe influenza pneumonia + septic shock. Intubated in ED. ICU Day 2.
-
 VENTILATOR:
 • VCV | VT 360 mL (6 mL/kg PBW) | RR 26 | PEEP 12 | FiO2 0.7
 • Pplat 32–34 cmH2O | Driving pressure 20–22 cmH2O
@@ -45,7 +40,6 @@ VENTILATOR:
 {
     id:3, title:"Mixed Septic–Cardiogenic Shock", domain:"Advanced Haemodynamics", difficulty:"High",
     stem:`70M, previous anterior STEMI, LVEF 30%, on GDMT. CAP. Post 2L crystalloid + antibiotics — still shocked.
-
 ICU ARRIVAL:
 • MAP 54 | HR 110 AF | Temp 38.4°C | RR 28 | SpO2 92% on 6L
 • Lactate 4.2 | UO 10 mL/h | pH 7.30 | PaO2 68 (FiO2 0.4)
@@ -61,7 +55,6 @@ ICU ARRIVAL:
     id:4, title:"Severe TBI + Raised ICP", domain:"Neurocritical Care", difficulty:"High",
     stem:`28M. High-speed RTC. GCS 6 (E1V1M4). Right pupil 5 mm non-reactive, left 3 mm reactive.
 CT: right acute SDH, 8 mm midline shift, compressed basal cisterns.
-
 POST DECOMPRESSIVE CRANIECTOMY + HAEMATOMA EVACUATION:
 • MAP 75–80 | ICP 16–18 mmHg | CPP ≈ 58–62 mmHg
 • VT 6–7 mL/kg PBW | PEEP 5 | PaCO2 36–38
@@ -74,7 +67,6 @@ POST DECOMPRESSIVE CRANIECTOMY + HAEMATOMA EVACUATION:
 {
     id:5, title:"Post-Cardiac Arrest — Neuroprognostication", domain:"Cardiac & Post-Arrest Care", difficulty:"High",
     stem:`58F. Hypertension, dyslipidaemia. OHCA VF arrest. Bystander CPR within 3 min. Low-flow time 25 min to ROSC.
-
 POST-PCI (anterior STEMI treated):
 • Comatose — no eye opening, no response to pain, minimal brainstem reflexes
 • Stable on low-dose norad | TTM at 36°C
@@ -89,7 +81,6 @@ POST-PCI (anterior STEMI treated):
     id:6, title:"Post-op Septic Shock — Emergency Laparotomy", domain:"Peri-operative Critical Care", difficulty:"High",
     stem:`76F. COPD GOLD III, CKD Stage 3 (Cr baseline 1.4), AF on apixaban.
 Hartmann's procedure + peritoneal lavage for faecal peritonitis.
-
 ICU POST-OP:
 • MAP 62–68 | HR 110 | Temp 36°C | Norad 0.25 mcg/kg/min
 • Lactate 5.5 | UO 0.2 mL/kg/h | pH 7.28 | Cr 2.1 | INR 1.5`,
@@ -103,12 +94,9 @@ ICU POST-OP:
     stem:`68M. Severe COPD FEV1 30%. Three days worsening dyspnoea, purulent sputum.
 Drowsy, accessory muscles, pursed-lip breathing.
 ABG on 4L O2: pH 7.28 | PaCO2 68 | PaO2 54 | HCO3 30
-
 BiPAP: IPAP 16, EPAP 4, FiO2 0.4
-
 2 HOURS:
 • RR 26 | SpO2 90–92% | More alert | ABG: pH 7.31 | PaCO2 62
-
 6 HOURS:
 • Agitated, tachypnoeic, mask leaks | ABG: pH 7.23 | PaCO2 75 | PaO2 58`,
     progressive_data:["Interface changed to full face mask, IPAP 20, EPAP 6. Still agitated. RR 34.","1 hour: pH 7.20, PaCO2 82, RR 38. Mask intolerance worsening.","Patient drowsy. BP 90/60. Sparse respiratory effort. SpO2 84%. GCS 10.","Post-intubation: pH 7.18, PaCO2 90, PaO2 92. Breath sounds reduced bilaterally."],
@@ -119,7 +107,6 @@ BiPAP: IPAP 16, EPAP 4, FiO2 0.4
 {
     id:8, title:"CCB Overdose — Toxin-Induced Shock", domain:"Toxicology", difficulty:"High",
     stem:`45F. Depression. Suspected sustained-release amlodipine ingestion ± other medications. ~4h post-ingestion.
-
 ICU ARRIVAL:
 • MAP 50 | HR 50 sinus bradycardia | SpO2 98% on 4L | GCS 13
 • pH 7.22 | HCO3 12 | Lactate 6.0
@@ -134,7 +121,6 @@ ICU ARRIVAL:
     id:9, title:"Difficult Weaning + ICU-Acquired Weakness", domain:"Weaning & Chronic Critical Illness", difficulty:"Medium",
     stem:`60M, BMI 36, T2DM, hypertension. 4 weeks ICU — severe COVID ARDS → septic shock.
 Course: prolonged proning, NMBA 14 days, VV-ECMO 10 days (decannulated 5 days ago).
-
 CURRENT:
 • PSV 12 | PEEP 8 | FiO2 0.4 | RR 24 | SpO2 94% | P/F ~190
 • Failing ALL SBTs: tachypnoea, desaturation, anxiety at 8–12 min
@@ -149,7 +135,6 @@ CURRENT:
     stem:`64M. Septic shock + moderate ARDS (P/F 145). Ventilated on norad 0.18 mcg/kg/min.
 • MAP 68 | HR 96 | SpO2 95% | FiO2 0.55 | PEEP 10 | Pplat 28
 • Lactate 2.1 (trending down) | UO 40 mL/h
-
 SITUATION: Suspected mesenteric ischaemia. Surgical team requesting urgent CT abdomen.
 ICU = 2 floors from radiology. Estimated transport + scan = 45–60 minutes.
 You are the consultant. The registrar requests your decision.`,
@@ -161,19 +146,16 @@ You are the consultant. The registrar requests your decision.`,
 {
     id:11, title:"Tropical Sepsis — Dengue vs Bacterial vs Leptospirosis", domain:"Sepsis & Circulatory Shock", difficulty:"High",
     stem:`34M, returning traveller from Southeast Asia (Thailand/Vietnam), 10 days after return. Seven days of fever, severe myalgia, headache. Now presenting with hypotension and confusion.
-
 ICU ARRIVAL:
 • GCS 12 (E3V3M6) | Temp 39.4°C | HR 118 | BP 78/44 (MAP 55)
 • RR 26 | SpO2 94% on 6L O2 | Mottled peripheries | CRT 4 seconds
 • Jaundice clinically evident | Conjunctival suffusion noted
-
 LABS:
 • WBC 3.2 (lymphopenia) | Plt 28 ×10⁹/L | Hb 11.2
 • Cr 3.1 (baseline unknown) | Bili 88 µmol/L | AST 420 | ALT 380
 • LDH 1840 | CRP 210 | PCT 18 ng/mL
 • Coagulation: PT 18s | APTT 52s | Fibrinogen 1.4 g/L
 • Lactate 4.6 mmol/L | Blood glucose 3.1 mmol/L
-
 No malaria film result yet. NS1 antigen pending. Leptospira serology pending.`,
     progressive_data:[
       "Malaria rapid test: NEGATIVE. NS1 antigen: POSITIVE (dengue). Blood cultures: no growth at 48h. Leptospira IgM: weakly positive (borderline).",
@@ -204,18 +186,15 @@ No malaria film result yet. NS1 antigen pending. Leptospira serology pending.`,
 {
     id:12, title:"Sepsis with Overt DIC + Severe Thrombocytopenia", domain:"Sepsis & Circulatory Shock", difficulty:"High",
     stem:`58F, known myelodysplastic syndrome (MDS), baseline Plt ~60. Admitted with Gram-negative bacteraemia from biliary source. Post ERCP Day 1.
-
 ICU ADMISSION:
 • MAP 58 | HR 124 | Temp 39.1°C | RR 28 | SpO2 92% on 10L
 • GCS 14 | Mottled | CRT 5 seconds | Oozing from ERCP puncture site
-
 LABS:
 • Plt 14 ×10⁹/L (down from baseline 60)
 • PT 22s | APTT 68s | Fibrinogen 0.8 g/L | D-dimer >20 mg/L
 • Hb 7.1 | WBC 0.9 (neutropenic) | Cr 2.4 | Bili 82
 • Lactate 5.1 | Blood cultures: Gram-negative rods (2/2 bottles)
 • CXR: bilateral infiltrates
-
 SCORING: ISTH overt DIC score = 6 (overt DIC)`,
     progressive_data:[
       "Blood cultures: Klebsiella pneumoniae, ESBL-producing. Sensitivities pending. Empirical meropenem started.",
@@ -246,18 +225,15 @@ SCORING: ISTH overt DIC score = 6 (overt DIC)`,
 {
     id:13, title:"Acute RV Failure from Massive PE", domain:"Advanced Haemodynamics", difficulty:"High",
     stem:`67M, post right total hip replacement Day 3. Sudden haemodynamic collapse during physiotherapy.
-
 IMMEDIATE PRESENTATION:
 • GCS 13 | HR 128 | BP 72/40 (MAP 51) | RR 34 | SpO2 78% on 15L NRB
 • Distended neck veins | Trachea central | No wheeze
 • ECG: sinus tachycardia, S1Q3T3 pattern, new RBBB, T-wave inversions V1–V4
-
 BEDSIDE ECHO (done in 3 minutes):
 • Severely dilated RV, RV:LV ratio >1.0
 • Flattened IVS (D-sign) on short axis
 • TAPSE 9 mm | Tricuspid regurgitation with estimated RVSP 62 mmHg
 • Small underfilled LV | No tamponade | No pneumothorax
-
 CTPA: Large bilateral central PE with saddle thrombus. No evidence of infarction.
 RV/LV ratio on CT: 1.4`,
     progressive_data:[
@@ -289,18 +265,15 @@ RV/LV ratio on CT: 1.4`,
 {
     id:14, title:"Decompensated Pulmonary Hypertension + RV Failure", domain:"Advanced Haemodynamics", difficulty:"High",
     stem:`42F, known idiopathic pulmonary arterial hypertension (IPAH) on sildenafil + bosentan + IV epoprostenol (prostacyclin infusion). Admitted with 3 days of worsening dyspnoea and presyncope. Epoprostenol pump ran out 6 hours ago.
-
 ICU ADMISSION:
 • HR 118 | BP 84/52 (MAP 63) | RR 32 | SpO2 84% on 10L NRB | Temp 37.2°C
 • Raised JVP | Peripheral oedema | Hepatomegaly | Ascites
 • GCS 14
-
 ECHO:
 • Severely dilated and hypertrophied RV | TAPSE 8 mm
 • Estimated RVSP 95 mmHg | D-sign present
 • LV small, underfilled | EF 65%
 • Moderate-severe tricuspid regurgitation
-
 RHC (from previous admission): mPAP 62 mmHg, PVR 12 WU, CO 2.8 L/min, PCWP 8 mmHg`,
     progressive_data:[
       "Epoprostenol restarted at previous dose. 30 minutes later: SpO2 improving to 90%, HR 112. However MAP now 58.",
@@ -331,19 +304,16 @@ RHC (from previous admission): mPAP 62 mmHg, PVR 12 WU, CO 2.8 L/min, PCWP 8 mmH
 {
     id:15, title:"Cardiogenic Shock — Papillary Muscle Rupture", domain:"Cardiac & Post-Arrest Care", difficulty:"High",
     stem:`72M, hypertension, ex-smoker. Presented 18h ago with chest pain, inferior STEMI. Thrombolysis given at district hospital (no PCI available). Transferred for rescue PCI — vessel opened, TIMI 2 flow achieved.
-
 NOW Day 2 post-PCI, sudden clinical deterioration:
 • HR 128 | BP 76/44 (MAP 55) | RR 32 | SpO2 88% on 15L NRB
 • New loud pansystolic murmur loudest at apex
 • Bilateral crepitations to mid-zones | Frothy sputum
-
 ECHO (URGENT):
 • Flail posterior mitral leaflet — severe acute MR
 • Hyperdynamic LV (EF 65%)
 • Severely enlarged LA | Dilated pulmonary veins
 • Estimated RVSP 58 mmHg
 • No VSD
-
 ABG: pH 7.28 | PaCO2 28 | PaO2 62 (FiO2 0.8) | Lactate 5.8`,
     progressive_data:[
       "Despite NIV (BiPAP 14/6, FiO2 0.8): SpO2 improving to 92% but MAP falling to 50. Intubation being considered.",
@@ -374,18 +344,15 @@ ABG: pH 7.28 | PaCO2 28 | PaO2 62 (FiO2 0.8) | Lactate 5.8`,
 {
     id:16, title:"Post-Cardiac Surgery — Low Output vs Tamponade", domain:"Peri-operative Critical Care", difficulty:"High",
     stem:`68M, triple-vessel CABG + mitral valve repair. On bypass 118 minutes. ICU Day 1 post-op.
-
 BASELINE POST-OP (Hour 2):
 • MAP 72 | HR 88 (paced) | CVP 10 | CO 4.2 L/min (PA catheter)
 • Chest drains: 80 mL/h (acceptable)
-
 NOW (Hour 6):
 • MAP 54 | HR 118 (sinus) | CVP rising 10 → 18 cmH2O
 • CO falling: 4.2 → 2.1 L/min | SVR rising
 • Chest drain output SUDDENLY STOPPED (was 80 mL/h → 0 mL/h)
 • SpO2 94% | Urine output falling: 5 mL/h
 • Patient increasingly agitated
-
 ECHO (bedside):
 • Moderate-sized pericardial collection (1.8 cm posterior)
 • RV diastolic collapse
@@ -420,11 +387,9 @@ ECHO (bedside):
 {
     id:17, title:"Undifferentiated Shock — Echo + Advanced Monitoring", domain:"Advanced Haemodynamics", difficulty:"High",
     stem:`55M, no known medical history. Found collapsed at home. Brought by ambulance. No history available.
-
 ARRIVAL:
 • GCS 9 (E2V2M5) | HR 134 | BP 68/38 (MAP 48) | RR 28 | Temp 38.6°C
 • SpO2 86% on 15L NRB | Mottled to knees | CRT 6 seconds
-
 INITIAL LABS:
 • Lactate 8.2 mmol/L | pH 7.18 | PaCO2 24 | HCO3 9
 • WBC 22 | Plt 88 | Cr 4.1 | K+ 6.2 | Troponin I 8.4 ng/mL (HIGH)
@@ -460,13 +425,11 @@ INITIAL LABS:
 {
     id:18, title:"Hypertensive Emergency + Flash Pulmonary Oedema", domain:"Advanced Haemodynamics", difficulty:"Medium",
     stem:`78F, known hypertension (poorly controlled), CKD Stage 3, bilateral renal artery stenosis (diagnosed 5 years ago, not intervened). Presented with sudden onset severe dyspnoea and confusion.
-
 ICU ARRIVAL:
 • GCS 12 | HR 108 | BP 214/118 (MAP 150) | RR 38 | Temp 37.1°C
 • SpO2 78% on room air → 86% on 15L NRB
 • Bilateral wheeze + crackles to apices | Frothy pink sputum
 • JVP elevated | No peripheral oedema
-
 ABG (FiO2 0.8 NRB): pH 7.28 | PaCO2 32 | PaO2 58 | HCO3 15 | Lactate 3.1
 CXR: bilateral bat-wing infiltrates, enlarged cardiac silhouette, upper lobe diversion
 ECG: LVH pattern, no acute ST changes
@@ -501,17 +464,14 @@ Cr: 3.8 (baseline 2.1)`,
 {
     id:19, title:"Mesenteric Ischaemia — Severe Lactic Acidosis", domain:"Peri-operative Critical Care", difficulty:"High",
     stem:`71M, AF (on warfarin, INR subtherapeutic at 1.4 on admission), known atherosclerosis. 6 hours of severe central abdominal pain, vomiting, absolute constipation for 12 hours.
-
 ICU ARRIVAL (post-surgical referral):
 • GCS 14 | HR 128 AF | BP 88/50 (MAP 63) | RR 32 | Temp 37.8°C
 • SpO2 94% on 10L | Abdomen: soft but severely tender diffusely
 • Absent bowel sounds | Rectal examination: no blood
-
 LABS:
 • Lactate 9.8 mmol/L | pH 7.12 | PaCO2 18 | HCO3 6 | BE -22
 • WBC 24 | Plt 112 | Cr 3.1 (base 1.2) | K+ 5.8
 • D-dimer >20 mg/L | INR 1.4 | Lipase normal
-
 CT ANGIOGRAPHY:
 • SMA thrombosis — origin of SMA completely occluded
 • Large territory of small bowel with absent enhancement
@@ -546,16 +506,13 @@ CT ANGIOGRAPHY:
 {
     id:20, title:"LVAD Patient with Sepsis and Haemodynamic Instability", domain:"Advanced Haemodynamics", difficulty:"High",
     stem:`62M, HeartMate 3 LVAD in situ for 18 months (destination therapy, NYHA IV dilated cardiomyopathy, LVEF 10%). Presents with 3 days of fever, rigors, reduced pump output alarm, and increasing dependence on IV fluids at home.
-
 ICU ADMISSION:
 • HR 124 (no pulsatile waveform — expected) | MAP 62 (arterial line, not NIBP)
 • LVAD speed: 5400 RPM | Flow estimated: 3.2 L/min (was 4.8 L/min baseline)
 • SpO2 94% on 6L O2 | Temp 39.2°C | GCS 14
-
 LVAD PARAMETERS (from device monitor):
 • Power: 8.2 W (elevated, baseline 5.8 W) | PI (pulsatility index): 2.1 (low, baseline 4.0)
 • Frequent low-flow alarms
-
 LABS:
 • WBC 22 | CRP 310 | PCT 28 | Blood cultures: 3/3 bottles positive (Gram-positive cocci)
 • Hb 8.2 | Plt 68 | INR 3.8 (supratherapeutic — warfarin target 2.0–3.0)
@@ -589,13 +546,10 @@ LABS:
 {
     id:21, title:"Near-Fatal Asthma", domain:"Respiratory Failure", difficulty:"High",
     stem:`28F, known severe asthma, previous ICU admission. Found obtunded at home.
-
 ED ARRIVAL:
 • GCS 10 | HR 138 | BP 88/52 | RR 36 | SpO2 82% on 15L NRB
 • Silent chest | Accessory muscles maximal | Pulsus paradoxus 22 mmHg
-
 ABG (FiO2 0.8): pH 7.18 | PaCO2 72 | PaO2 58 | HCO3 26 | Lactate 4.1
-
 GIVEN: Salbutamol nebs ×3, ipratropium, hydrocortisone 200mg, magnesium 2g IV — minimal response.`,
     progressive_data:["RSI performed. Post-intubation: BP drops to 58/32. SpO2 82%. Peak airway pressures 62 cmH2O. Bilateral reduced air entry.","Disconnected from ventilator for 30 seconds — BP recovers to 88/58. SpO2 improving to 90%. Expiratory hold shows iPEEP 18 cmH2O.","Ventilator adjusted: RR 8, VT 6 mL/kg, I:E 1:4, zero extrinsic PEEP, FiO2 1.0. PaCO2 now 88. pH 7.12. Team concerned.","Hour 3: pH 7.22, PaCO2 72, SpO2 96%. Peak pressures falling. IV adrenaline infusion started. Team discussing VV-ECMO."],
     key_probes:["Silent chest + PaCO2 72 — classify severity and what does this PaCO2 tell you specifically?","Post-intubation BP drops to 58. First thing on your differential and immediate management.","iPEEP 18 cmH2O confirmed. Walk me through your ventilator strategy — every parameter with rationale.","pH 7.12, PaCO2 88. The registrar wants to increase RR to 20 to normalise CO2. You say no — why?","Refractory bronchospasm not responding to standard treatment — what escalation options do you have?"],
@@ -605,14 +559,11 @@ GIVEN: Salbutamol nebs ×3, ipratropium, hydrocortisone 200mg, magnesium 2g IV �
 {
     id:22, title:"Severe CAP — HFNC vs NIV vs Intubation", domain:"Respiratory Failure", difficulty:"High",
     stem:`48F, non-smoker, no comorbidities. Five days fever, dry cough, progressive dyspnoea. Legionella urinary antigen positive.
-
 ED ASSESSMENT:
 • HR 118 | BP 104/68 | RR 36 | Temp 39.4°C | GCS 15
 • SpO2 82% room air → 91% on 15L NRB | Cannot complete full sentences
-
 ABG (FiO2 0.8): pH 7.46 | PaCO2 28 | PaO2 62 | Lactate 2.1
 P/F ratio = 77 | ROX index = (91/80)/36 = 3.16
-
 No ECMO capability at this centre. Nearest ECMO centre 90 minutes away.`,
     progressive_data:["HFNC started 60L/min FiO2 0.8. After 1 hour: SpO2 95%, RR 28, ROX index improving to 4.8. Patient comfortable.","Hour 3 on HFNC: SpO2 94%, RR 32, ROX index falling to 3.9. Patient increasingly distressed. Accessory muscle use worsening.","Hour 6: SpO2 falling to 88% despite FiO2 1.0. RR 42. ROX index 2.6. ABG: PaO2 52, pH 7.48, PaCO2 26.","Post-intubation Day 2: P/F ratio 74 despite PEEP 14 and FiO2 1.0. Driving pressure 22 cmH2O. Proning started."],
     key_probes:["P/F 77, RR 36 — your immediate respiratory support decision and rationale.","What is the ROX index — calculate it, interpret it, and what threshold concerns you?","Hour 3: ROX index falling 4.8 → 3.9. What does this trajectory tell you and what do you do now?","RR 42, VT approximately 700 mL on HFNC. Why is this specifically dangerous in ARDS — name the mechanism.","No ECMO here. Deteriorating on day 2 post-intubation. When do you transfer and how do you stabilise for transport?"],
@@ -622,14 +573,11 @@ No ECMO capability at this centre. Nearest ECMO centre 90 minutes away.`,
 {
     id:23, title:"Immunocompromised Host — PJP & Diffuse Infiltrates", domain:"Respiratory Failure", difficulty:"High",
     stem:`54M, renal transplant recipient on tacrolimus + mycophenolate + prednisolone for 3 years. Three weeks progressive dyspnoea, dry cough, low-grade fever.
-
 ICU ADMISSION:
 • HR 106 | BP 118/72 | RR 28 | Temp 38.1°C | SpO2 88% on 6L O2
 • Bilateral fine crackles
-
 ABG (FiO2 0.4): pH 7.46 | PaCO2 32 | PaO2 58 | Lactate 1.4
 CT chest: bilateral ground-glass opacities with cystic changes, no consolidation
-
 LDH: 680 IU/L | Beta-D-glucan: 480 pg/mL (strongly positive, threshold >80)
 CMV PCR: 3200 copies/mL | Cryptococcal antigen: negative`,
     progressive_data:["Bronchoscopy + BAL performed on HFNC. BAL: silver stain shows cysts and trophic forms of Pneumocystis jirovecii. CMV culture pending.","High-dose co-trimoxazole started (TMP 15–20 mg/kg/day). IV ganciclovir started for CMV. 24h later: SpO2 worsening to 82% on FiO2 0.8 HFNC.","Intubated. Post-intubation P/F = 88. PEEP 12, FiO2 0.85. Immunology recommends adjunctive corticosteroids for PJP.","Day 5: P/F improving to 145. Tacrolimus levels supratherapeutic (trough 18 ng/mL, target 5–8). Nephrology concerned about graft rejection risk."],
@@ -640,12 +588,10 @@ CMV PCR: 3200 copies/mL | Cryptococcal antigen: negative`,
 {
     id:24, title:"Patient-Ventilator Asynchrony — High Drive & NMBA", domain:"Respiratory Failure", difficulty:"High",
     stem:`62M, post-cardiac arrest Day 2, TTM 36°C being rewarmed. Severe bilateral aspiration pneumonia. Intubated, ventilated.
-
 CURRENT VENTILATOR:
 • Mode: VCV | VT 480 mL (6 mL/kg PBW 80 kg) | RR set 18 | PEEP 10 | FiO2 0.65
 • Actual RR: 32–38 | Measured VT: 680–820 mL | Pplat 36 | DP 26 cmH2O
 • P/F ratio: 108
-
 SEDATION: Propofol 3 mg/kg/h + fentanyl 100 mcg/h — RASS -2 but frequent dyssynchrony
 WAVEFORM: Double triggering and reverse triggering every 3–5 breaths`,
     progressive_data:["Sedation increased — propofol 5 mg/kg/h + fentanyl 150 mcg/h + midazolam boluses. Dyssynchrony persisting. DP still 24 cmH2O.","Cisatracurium 0.15 mg/kg bolus then infusion started. Within 20 min: dyssynchrony resolved. DP falling 24 → 16 cmH2O. P/F improving 108 → 134.","Hour 6 on NMBA: P/F 148, DP 14. Team asks whether to continue NMBA and when to reassess. Nurse asks about TOF monitoring.","Hour 48: P/F 188, DP 12. NMBA weaned off. 2 hours later: dyssynchrony returning, DP rising to 20 cmH2O."],
@@ -656,13 +602,11 @@ WAVEFORM: Double triggering and reverse triggering every 3–5 breaths`,
 {
     id:25, title:"Barotrauma in ARDS — Pneumothorax & BPF", domain:"Respiratory Failure", difficulty:"High",
     stem:`38M, severe COVID ARDS Day 6. On VV-ECMO Day 2. Ultra-protective ventilation: VT 3 mL/kg, PEEP 12, RR 10, FiO2 0.4.
-
 SUDDEN DETERIORATION:
 • MAP falling 72→52 | HR rising 88→128 | SpO2 falling 94%→81%
 • ECMO flow alarms: suction events
 • Ventilator: high pressure alarm, peak 58 cmH2O
 • Absent left breath sounds | Trachea deviated to right
-
 CXR (portable, immediate): Large left pneumothorax with tension physiology. Mediastinal shift right.`,
     progressive_data:["14Fr intercostal drain inserted left 4th ICS mid-axillary line. Immediate air release and bubbling. MAP recovering to 65. SpO2 improving to 88%.","Post-drain: SpO2 plateaus at 88% despite drain swinging. Large air leak persisting. Subcutaneous emphysema spreading.","VV-ECMO sweep gas increased to compensate. Ventilator changes: PEEP reduced from 12 to 6, RR reduced to 8, accepting higher PaCO2.","Day 8: Air leak decreasing. Subcutaneous emphysema stable. ECMO flow 5 L/min. Team discussing bronchoscopy to assess for broncho-pleural fistula."],
     key_probes:["Tension pneumothorax on VV-ECMO — does the clinical presentation differ from a non-ECMO patient and why?","Immediate management — do you wait for CXR or needle decompress first?","Post-drain air leak persisting — what is a broncho-pleural fistula and how does it affect your ventilator strategy?","PEEP reduction in ARDS with air leak — how do you balance lung recruitment against worsening the fistula?","Subcutaneous emphysema spreading to neck — what are you worried about and what do you do?"],
@@ -672,12 +616,10 @@ CXR (portable, immediate): Large left pneumothorax with tension physiology. Medi
 {
     id:26, title:"Obesity Hypoventilation — Difficult Weaning", domain:"Respiratory Failure", difficulty:"Medium",
     stem:`68M, BMI 54 kg/m2, known OHS on home CPAP (10 cmH2O), T2DM, hypertension. Acute hypercapnic respiratory failure from community-acquired pneumonia.
-
 CURRENT STATUS (Day 5 ICU):
 • Intubated | Mode: PSV 14 | PEEP 12 | FiO2 0.40 | RR 22 | VT 620 mL
 • pH 7.38 | PaCO2 58 | PaO2 74 | HCO3 34 (chronic compensation)
 • SpO2 96% | MAP 82 | GCS 15 on minimal sedation
-
 FAILED SBT YESTERDAY: After 20 min T-piece — RR 40, SpO2 88%, diaphoresis. Stopped.
 CXR: resolving right lower lobe consolidation.`,
     progressive_data:["Repeat SBT today on CPAP 5/0: after 30 min — RR 34, SpO2 91%, ABG: pH 7.31, PaCO2 72. Stopped.","Respiratory physio: poor inspiratory muscle strength. NIF -18 cmH2O (target <-20). Severe upper airway fat deposition on CT neck.","Tracheostomy performed Day 7. Patient tolerating 4-hour T-piece trials. PaCO2 on ABG after 4h: 64 mmHg.","Day 12: tolerating 12-hour T-piece trials. Team discussing decannulation criteria and home NIV plan."],
@@ -688,11 +630,9 @@ CXR: resolving right lower lobe consolidation.`,
 {
     id:27, title:"Post-operative Respiratory Failure — Atelectasis vs PE vs Empyema", domain:"Respiratory Failure", difficulty:"Medium",
     stem:`72F, known COPD (FEV1 58%), right hemicolectomy for colonic cancer. Epidural analgesia in situ. Post-op Day 2, transferred from surgical ward with hypoxia.
-
 ICU ARRIVAL:
 • HR 112 | BP 118/72 | RR 28 | Temp 38.2°C | GCS 15
 • SpO2 88% on 6L O2 | Right basal reduced air entry | Dull to percussion right base
-
 ABG (FiO2 0.4): pH 7.44 | PaCO2 34 | PaO2 66 | Lactate 1.8
 CXR: right lower zone opacity, loss of right hemidiaphragm, right costophrenic angle blunted
 ECG: sinus tachycardia | D-dimer: 4200 ng/mL`,
@@ -704,9 +644,7 @@ ECG: sinus tachycardia | D-dimer: 4200 ng/mL`,
 {
     id:28, title:"Post-Extubation Stridor — Prevention & Management", domain:"Respiratory Failure", difficulty:"Medium",
     stem:`44F, intubated for 8 days following severe septic shock and ARDS. RASS 0, CAM-ICU negative, MRC sum score 44/60. P/F 220 on PEEP 5/FiO2 0.35.
-
 SBT PASSED: 30-min T-piece — RR 18, SpO2 97%, HR 88, no distress.
-
 PRE-EXTUBATION:
 • ETT 7.5 mm oral | Cuff leak test: NO audible leak at 25 cmH2O cuff pressure
 • Secretion burden: minimal | Strong cough (peak flow >160 L/min)
@@ -719,14 +657,11 @@ PRE-EXTUBATION:
 {
     id:29, title:"VV-ECMO Patient — Inter-Hospital Transfer", domain:"Respiratory Failure & ECMO", difficulty:"High",
     stem:`29M, previously healthy. Severe influenza ARDS — P/F 52 after 5 days of optimal ventilation including proning. VV-ECMO commenced at peripheral hospital (right internal jugular dual-lumen Avalon cannula, 31 Fr). Day 2 on ECMO, haemodynamically stable.
-
 ECMO PARAMETERS:
 • Flow: 4.8 L/min | RPM: 3200 | Sweep gas FiO2 1.0 at 8 L/min
 • Recirc fraction estimated 25% | ACT 180–220 seconds
-
 VENTILATOR (ultra-protective):
 • VCV | VT 2.5 mL/kg | PEEP 10 | RR 10 | FiO2 0.4
-
 TRANSFER REQUEST: Regional ECMO centre 140km away.`,
     progressive_data:["Pre-transfer checklist in progress. Registrar: transport ventilator compatible, ECMO circuit secure, heparin infusion running. Questions arise about O2 cylinder calculation and handover.","En route (ambulance, 90 min estimated): ECMO flow alarm — flow drops from 4.8 to 3.1 L/min. Circuit inspection: large clot visible in venous drainage limb.","Circuit clot managed. 30 min from destination: patient develops new haemoptysis — 40 mL blood from ETT. SpO2 falling. ECMO sweep gas reduced.","Arrival at ECMO centre: formal handover. New chest CT: bilateral pulmonary haemorrhage. ACT 280 seconds (supratherapeutic)."],
     key_probes:["Who can transfer a VV-ECMO patient — team composition, skills, and minimum requirements?","Calculate O2 requirements for this transfer — walk me through the arithmetic.","En route: ECMO flow drops 4.8 → 3.1 L/min with visible circuit clot. Your immediate steps.","Haemoptysis on ECMO with ACT 280 — how do you balance anticoagulation against bleeding risk?","Formal handover at ECMO centre — what must be communicated and documented?"],
@@ -736,7 +671,6 @@ TRANSFER REQUEST: Regional ECMO centre 140km away.`,
 {
     id:30, title:"Late ARDS — Fibrotic Phase & Step-Down Planning", domain:"Respiratory Failure", difficulty:"Medium",
     stem:`55M, ARDS from severe bacterial pneumonia — now Day 24 ICU. Initial P/F 68, required proning ×6 sessions and VV-ECMO ×8 days (decannulated Day 16). Tracheostomy in situ (Day 10).
-
 CURRENT STATUS:
 • Tracheostomy on CPAP 5 cmH2O, FiO2 0.35 | SpO2 95%
 • P/F ratio: 195 | Tolerating 8-hour T-piece trials
@@ -751,14 +685,11 @@ CURRENT STATUS:
 {
     id:31, title:"Aneurysmal SAH Day 1 — BP Targets & Rebleed Prevention", domain:"Neurocritical Care", difficulty:"High",
     stem:`52F, thunderclap headache, vomiting, brief LOC. Found by partner.
-
 ED ARRIVAL:
 • GCS 12 (E3V3M6) | HR 88 | BP 198/112 | Temp 37.2°C
 • Meningism | Right third nerve palsy (pupil involved)
-
 CT head: SAH, diffuse, thick in basal cisterns (Fisher Grade 4)
 CTA: right PCOM aneurysm 8mm
-
 WFNS Grade III | Hunt-Hess Grade III
 Plan: endovascular coiling within 24 hours.`,
     progressive_data:["Post-coiling Hour 4: BP 142/88. GCS 14. Nimodipine started. Nurse asks about BP target now aneurysm is secured.","Day 4: GCS falling 14→11. New left arm weakness. TCD: right MCA mean velocity 180 cm/s (baseline 80). CT perfusion: right MCA territory hypoperfusion.","BP augmentation started — MAP target raised to 100–110 mmHg. Norad commenced. GCS improving to 13.","Day 7: Na 128 mmol/L. Urine output 3.8 L in 24h. Team debating SIADH vs cerebral salt wasting."],
@@ -769,11 +700,9 @@ Plan: endovascular coiling within 24 hours.`,
 {
     id:32, title:"SAH Day 7 — Delayed Cerebral Ischaemia & Vasospasm", domain:"Neurocritical Care", difficulty:"High",
     stem:`48M, aneurysmal SAH from right MCA aneurysm, coiled on Day 1. WFNS Grade II, recovered to GCS 15 by Day 2. Now Day 7.
-
 SUDDEN DETERIORATION:
 • GCS falling 15→10 over 2 hours | New left hemiplegia | Left facial droop
 • BP 118/72 (MAP 83) | HR 92 | Temp 37.8°C
-
 CT head: no new haemorrhage, no hydrocephalus
 CT perfusion: right MCA territory — reduced CBF, prolonged MTT
 TCD: right MCA mean velocity 220 cm/s | Lindegaard ratio 5.2`,
@@ -785,17 +714,13 @@ TCD: right MCA mean velocity 220 cm/s | Lindegaard ratio 5.2`,
 {
     id:33, title:"Malignant MCA Infarct — Decompressive Hemicraniectomy", domain:"Neurocritical Care", difficulty:"High",
     stem:`61M, hypertension, AF on warfarin. Sudden onset left hemiplegia and aphasia, onset 2 hours ago.
-
 ED ARRIVAL:
 • GCS 9 | NIHSS 22 | BP 188/104 | HR 118 AF
 • Left gaze deviation | Left hemiplegia | Global aphasia
-
 CT head: hyperdense right MCA sign, loss of insular ribbon
 CTA: right M1 complete occlusion
 CT perfusion: large ischaemic core >100 mL
-
 Thrombectomy performed — TICI 2b reperfusion achieved.
-
 ICU DAY 1 POST-THROMBECTOMY:
 • GCS 8 | Midline shift 8 mm on repeat CT | Cerebral oedema worsening`,
     progressive_data:["Hour 18: GCS falling 8→6. Midline shift 12 mm. ICP 28 mmHg, CPP 52 mmHg. Bilateral extensor posturing.","Neurosurgery offers decompressive hemicraniectomy. Family present — no advance directive. Wife says 'he would want everything done.'","Post-hemicraniectomy Hour 24: ICP 8 mmHg, CPP 72 mmHg. GCS 7. Fever 38.8°C. Glucose 14 mmol/L.","Day 5: GCS improving to 10. Right side purposeful. Left side: minimal response to pain. Family asking about prognosis."],
@@ -806,16 +731,13 @@ ICU DAY 1 POST-THROMBECTOMY:
 {
     id:34, title:"Refractory Status Epilepticus — Escalation to Anaesthetic Coma", domain:"Neurocritical Care", difficulty:"High",
     stem:`38M, known epilepsy on levetiracetam + sodium valproate. Generalised tonic-clonic seizures >30 minutes. Not responsive to pre-hospital midazolam 10mg IM.
-
 ED ARRIVAL:
 • GCS 6 (post-ictal) | HR 128 | BP 162/94 | Temp 38.4°C | SpO2 92%
 • Intermittent tonic-clonic movements continuing
-
 TREATMENT SO FAR:
 • Lorazepam 4mg IV ×2 — no response
 • Levetiracetam 60 mg/kg IV infusion running
 • Blood glucose 8.2 | Na 138 | Ca 2.28
-
 EEG: continuous spike-wave discharges, no suppression`,
     progressive_data:["Sodium valproate 40 mg/kg IV loading dose given. Seizures continuing. EEG: persistent ictal activity.","Intubated (RSI ketamine/roc). Propofol infusion 2 mg/kg/h started. EEG shows burst suppression. Clinical seizures stopped.","Hour 6 on propofol: EEG showing breakthrough ictal activity despite burst suppression. Propofol increased to 5 mg/kg/h.","Hour 24: PRIS suspected — lactate rising 2.1→4.8, ECG: RBBB, urine discoloured green-brown. Lipase elevated."],
     key_probes:["Define status epilepticus — operational definition and the time thresholds that mandate escalation.","Treatment ladder for convulsive SE — first, second, and third-line agents with doses.","When do you intubate in status epilepticus — your criteria?","EEG-targeted treatment: what is the goal and what pattern are you targeting?","Propofol infusion syndrome — how do you recognise it and what do you do?"],
@@ -825,13 +747,11 @@ EEG: continuous spike-wave discharges, no suppression`,
 {
     id:35, title:"Non-Convulsive Status Epilepticus in ICU", domain:"Neurocritical Care", difficulty:"High",
     stem:`72F, admitted 5 days ago with severe CAP and septic shock. Initially intubated, now extubated. Improving haemodynamically.
-
 DAY 5 CONCERN:
 • GCS not returned to baseline — currently GCS 10 (E3V3M4)
 • Occasional eyelid twitching and rhythmic eye deviation
 • Not responding to verbal commands consistently
 • Temp 37.4°C | BP 124/78 | HR 88
-
 EEG ordered: continuous generalised rhythmic delta activity with superimposed spike-wave discharges`,
     progressive_data:["Lorazepam 2mg IV given while EEG running. 5 minutes later: EEG normalising — delta activity reducing. GCS improving to 13. NCSE confirmed by treatment response.","Levetiracetam 1500mg IV BD started. MRI brain: small bilateral cortical restricted diffusion (probable sepsis-associated encephalopathy vs subtle ischaemia). LP: no meningitis.","Day 7: GCS 14. Cognitive testing: moderate impairment — oriented to person only.","Team discussing antiepileptic weaning and long-term EEG monitoring need."],
     key_probes:["Define NCSE — how does it present in the ICU and why is it missed?","Unexplained coma or encephalopathy in the ICU — when do you order an EEG?","The Salzburg criteria for NCSE — what are they and how do you apply them?","Empirical benzodiazepine trial: if EEG improves and patient wakes up — is that diagnostic?","Does NCSE cause brain damage and does aggressive treatment change outcome?"],
@@ -841,16 +761,13 @@ EEG ordered: continuous generalised rhythmic delta activity with superimposed sp
 {
     id:36, title:"Guillain-Barré Syndrome — Respiratory Failure & Autonomic Instability", domain:"Neurocritical Care", difficulty:"High",
     stem:`42M, previously healthy. Progressive ascending weakness after Campylobacter gastroenteritis 4 weeks ago. Now with difficulty swallowing and breathlessness.
-
 ICU ADMISSION:
 • GCS 15 | HR 112 | BP 148/92 | RR 26 | SpO2 94% on 4L
 • Arms 2/5 | Legs 0/5 | Facial weakness | Bulbar dysfunction
 • Absent deep tendon reflexes throughout
-
 BEDSIDE RESPIRATORY:
 • FVC: 1.1 L (23% predicted) | MIP: -22 cmH2O
 • Can count to only 8 in one breath
-
 CSF: protein 2.8 g/L, 2 cells — albuminocytological dissociation`,
     progressive_data:["Over 2 hours: FVC falling 1.1→0.8 L. Patient increasingly distressed. SpO2 92% on 6L. Intubation decision imminent.","Post-intubation (awake fibreoptic): HR suddenly 42 bpm, BP 68/40. Team requesting atropine.","Post-intubation Day 2: BP fluctuating 82/48 to 198/112 within minutes. HR varying 38 to 148. Nurse asks for a single vasopressor order.","Day 3: IVIg 2g/kg commenced. Team asking: IVIg vs plasmapheresis — which and why?"],
     key_probes:["FVC 23% predicted, MIP -22, counting to 8 — do you intubate now? Give me the thresholds.","The 20-15-11 rule — what is it and how do you apply it in GBS?","Post-intubation: HR 42, BP 68. Is this vagal, is this autonomic GBS, and what do you do?","Autonomic instability in GBS — what are the specific dangers and how do you manage them?","IVIg vs plasmapheresis in GBS — mechanism, evidence, and how do you choose?"],
@@ -860,12 +777,10 @@ CSF: protein 2.8 g/L, 2 cells — albuminocytological dissociation`,
 {
     id:37, title:"Myasthenic Crisis vs Cholinergic Crisis", domain:"Neurocritical Care", difficulty:"High",
     stem:`56F, known myasthenia gravis on pyridostigmine 60mg TDS + prednisolone 20mg OD. Three days worsening ptosis, dysarthria, dysphagia. Now with respiratory distress.
-
 ICU ADMISSION:
 • GCS 15 | HR 92 | BP 138/82 | RR 28 | SpO2 92% on 6L
 • Ptosis bilateral | Nasal voice | Cannot lift head off pillow
 • Fasciculations noted | Increased oral secretions | Miosis
-
 FVC: 0.9 L (38% predicted)
 Recent: pyridostigmine increased to 90mg QDS 5 days ago by GP.`,
     progressive_data:["Decision: withhold pyridostigmine for 1 hour. Over 30 minutes: fasciculations decreasing, secretions less copious. FVC improving to 1.2 L.","Diagnosis: cholinergic crisis from pyridostigmine excess. Atropine 0.6mg IV given for secretions. Pyridostigmine withheld. Patient improves without intubation.","Day 2: IVIg 2g/kg over 5 days commenced. Trigger for decompensation being sought.","Neurology review: new thymoma found on CT chest. Thymectomy planned after recovery."],
@@ -876,12 +791,10 @@ Recent: pyridostigmine increased to 90mg QDS 5 days ago by GP.`,
 {
     id:38, title:"Traumatic Cervical SCI — Neurogenic Shock & Ventilation", domain:"Neurocritical Care", difficulty:"High",
     stem:`24M, rugby injury — landed on head. Brought in with cervical collar and spinal immobilisation.
-
 ED ARRIVAL:
 • GCS 15 | HR 46 | BP 72/40 (MAP 51) | RR 22 | Temp 36.1°C
 • Complete motor and sensory loss below C5 | No anal tone
 • Priapism | Warm peripheries | Absent deep tendon reflexes below injury
-
 C-spine MRI: C5/6 fracture-dislocation, cord compression, cord signal change at C5
 ASIA grade: ASIA A (complete injury)`,
     progressive_data:["After 2L crystalloid: MAP 58, HR 44. Atropine 0.6mg given: HR transiently 72 then falls back to 48. Team asking about vasopressor choice.","Noradrenaline started. MAP improving to 68. However SpO2 falling 97%→89% over 2 hours. RR 32. Heavy accessory muscle use.","FVC: 0.8 L (estimated 30% predicted). ABG: pH 7.32, PaCO2 52, PaO2 74 (FiO2 0.5). Intubation decision imminent.","Post-intubation Day 3: MAP target discussion — neurosurgery wants MAP >85 mmHg for spinal cord perfusion. DVT prophylaxis question raised."],
@@ -892,16 +805,13 @@ ASIA grade: ASIA A (complete injury)`,
 {
     id:39, title:"Brain Death — Diagnosis & Donor Management", domain:"Neurocritical Care", difficulty:"High",
     stem:`19M, previously healthy. Out-of-hospital cardiac arrest after drowning. CPR 25 minutes. ROSC achieved.
-
 ICU DAY 3:
 • Ventilated | Sedation OFF for 48 hours
 • GCS: E1V1M1 (no response to any stimuli)
 • Pupils: bilaterally fixed and dilated 6mm
 • No corneal reflexes | No gag | No cough to tracheal suction
 • No respiratory effort during 5-min ventilator disconnect
-
 ABG during apnoea test: PaCO2 rising 40→68 mmHg — no respiratory effort
-
 Ancillary testing (facial trauma preventing full cranial nerve testing): absent cerebral perfusion on radioisotope scan`,
     progressive_data:["Brain death confirmed by two senior physicians. Family informed. Organ donation discussed by specialist nurse.","Family agree to donation. Donor management begun. BP 82/48, DI (UO 600 mL/h, Na 158), temp 34.8°C, glucose 18 mmol/L.","Hormonal resuscitation bundle initiated. MAP improving to 72 with norad. DDAVP given for DI. Thyroid hormone and corticosteroids given.","24 hours later: haemodynamics stable. Kidneys, liver, heart, lungs all potentially viable. ODP team arriving."],
     key_probes:["Brain death — what are the preconditions that must be met before testing?","Walk me through the clinical tests for brain death — what are you testing and what constitutes a positive test?","Apnoea test — how do you perform it and what PaCO2 rise is required?","Diabetes insipidus in brain death — mechanism, diagnosis, and management.","Donor management bundle — what are the five hormonal therapies and what is each targeting?"],
@@ -911,15 +821,12 @@ Ancillary testing (facial trauma preventing full cranial nerve testing): absent 
 {
     id:40, title:"ICH on Anticoagulation — Reversal & BP Control", domain:"Neurocritical Care", difficulty:"High",
     stem:`78M, AF on rivaroxaban 20mg OD (last dose 8 hours ago). Hypertension. Sudden severe headache, right hemiplegia, dysphasia.
-
 ED ARRIVAL:
 • GCS 11 (E3V3M5) | NIHSS 18 | HR 88 AF | BP 208/118
 • Right hemiplegia | Global dysphasia | Right gaze deviation
-
 CT head: large left basal ganglia haematoma 45 mL, intraventricular extension
 CTA: no underlying vascular abnormality
 Anti-Xa level: 186 ng/mL (rivaroxaban detectable)
-
 Neurosurgery: no immediate surgical indication. ICU for medical management.`,
     progressive_data:["Hour 2: GCS falling 11→8. Repeat CT: haematoma expansion 45→68 mL. Midline shift 6 mm.","Reversal agent given. BP controlled. Hour 4: GCS stabilising at 8. No further expansion on 6-hour CT.","Day 2: GCS 9. Fever 38.4°C. Hyperglycaemia. Team discussing surgical evacuation vs conservative.","Day 5: GCS improving to 12. Right arm movement returning (1/5). DVT prophylaxis discussion: when to restart anticoagulation for AF?"],
     key_probes:["Rivaroxaban ICH — which reversal agent, dose, and time window?","BP management in ICH — target, agent, and time window. What does INTERACT2 tell you?","CT showing 45→68 mL expansion — risk factors for haematoma expansion and how do you prevent it?","Surgical evacuation in ICH — when is it indicated and what does the evidence say for basal ganglia haematoma?","Restarting anticoagulation post-ICH in AF — when, what, and how do you weigh the risks?"],
@@ -929,7 +836,6 @@ Neurosurgery: no immediate surgical indication. ICU for medical management.`,
 {
     id:41, title:"Out-of-Hospital VF Arrest Post-PCI — Full Post-ROSC Bundle", domain:"Cardiac & Post-Arrest Care", difficulty:"High",
     stem:`58F, hypertension, dyslipidaemia. OHCA — VF arrest at home. Bystander CPR within 3 min. Low-flow time 25 min to ROSC.
-
 POST-PCI (anterior STEMI treated):
 • Comatose — no eye opening, no response to pain, minimal brainstem reflexes
 • Stable on low-dose norad | TTM at 36°C
@@ -943,11 +849,9 @@ POST-PCI (anterior STEMI treated):
 {
     id:42, title:"In-Hospital PEA Arrest — Massive PE vs Tamponade", domain:"Cardiac & Post-Arrest Care", difficulty:"High",
     stem:`67M, post right hemicolectomy Day 2. Found unresponsive by nurse. CPR commenced immediately.
-
 DURING RESUSCITATION:
 • Rhythm: PEA | HR 0 on monitor | No palpable pulse
 • Ventilated with bag-mask | Compressions ongoing
-
 AVAILABLE INFORMATION:
 • Pre-arrest: increasing dyspnoea over 2 hours, SpO2 falling to 88% on 4L
 • No chest pain reported | BP had been 88/52 (MAP 63) — 'assumed post-op hypotension'
@@ -961,11 +865,9 @@ AVAILABLE INFORMATION:
 {
     id:43, title:"Fulminant Myocarditis — Escalation to MCS", domain:"Cardiac & Post-Arrest Care", difficulty:"High",
     stem:`28M, previously healthy. One week viral prodrome (fever, myalgia). Now presenting with chest pain, breathlessness, and presyncope.
-
 ICU ADMISSION:
 • HR 128 | BP 78/44 (MAP 55) | RR 28 | Temp 37.8°C
 • SpO2 90% on 10L O2 | GCS 14
-
 ECG: sinus tachycardia, diffuse ST elevation (concave), PR depression, low voltage
 Echo: severely dilated LV (LVEDD 6.8 cm), EF 15%, moderate pericardial effusion (no diastolic collapse), bilateral B-lines
 Troponin I: 48 ng/mL (HIGH) | BNP: 4200 pg/mL
@@ -978,13 +880,11 @@ CRP 280 | WBC 14 | Lymphocytes 0.8 (lymphopenia)`,
 {
     id:44, title:"Electrical Storm — Recurrent VT in Ischaemic Cardiomyopathy", domain:"Cardiac & Post-Arrest Care", difficulty:"High",
     stem:`64M, ischaemic cardiomyopathy (previous anterior MI, LVEF 25%), ICD in situ. Admitted following 3 ICD shocks at home within 2 hours.
-
 ICU ADMISSION:
 • HR 140 (VT) | BP 88/52 | GCS 14
 • ICD interrogation: appropriate shocks for monomorphic VT (cycle length 320 ms)
 • ECG: monomorphic VT, LBBB morphology, superior axis
 • Troponin mildly elevated | K+ 3.2 | Mg2+ 0.62 | pH 7.31
-
 IMMEDIATE: DC cardioversion performed — ROSC, sinus rhythm 88 bpm.
 20 minutes later: VT recurs. Second DC cardioversion. Sinus rhythm restored.`,
     progressive_data:["Third VT episode within 1 hour of admission. Team asking: what do you do differently now — antiarrhythmic strategy?","Amiodarone 300mg IV bolus given, infusion 900mg/24h started. K+ and Mg2+ replaced. No further VT for 3 hours.","Electrophysiology review: substrate mapping and VT ablation recommended. Pre-ablation: beta-blocker restarted cautiously. Sedation strategy for ablation discussed.","Post-ablation Day 2: no further VT. However new concern: amiodarone thyrotoxicosis suspected (TSH suppressed, T4 elevated, fever)."],
@@ -995,11 +895,9 @@ IMMEDIATE: DC cardioversion performed — ROSC, sinus rhythm 88 bpm.
 {
     id:45, title:"Post-CABG — Differentiating Low Output, Bleeding & Tamponade", domain:"Cardiac & Post-Arrest Care", difficulty:"High",
     stem:`72M, triple-vessel CABG + AVR (bioprosthetic). Bypass 142 minutes. ICU post-op.
-
 HOUR 2 BASELINE:
 • MAP 72 | HR 82 (paced) | CVP 9 | CO 3.8 L/min | SVR 1200
 • Chest drains: 60 mL/h | Temp 36.2°C | UO 45 mL/h
-
 HOUR 8 — DETERIORATION:
 • MAP 54 | HR 112 | CVP rising 9→16
 • CO falling 3.8→1.9 L/min | SVR rising 1200→2200
@@ -1013,13 +911,11 @@ HOUR 8 — DETERIORATION:
 {
     id:46, title:"Severe Bradycardia & Shock — Temporary Pacing in ICU", domain:"Cardiac & Post-Arrest Care", difficulty:"Medium",
     stem:`78M, known ischaemic heart disease, previous inferior MI. Admitted with anterior chest discomfort and presyncope. Found to be in complete heart block on arrival.
-
 ICU ADMISSION:
 • HR 32 (idioventricular rhythm) | BP 68/40 (MAP 49) | GCS 12
 • SpO2 92% on 6L O2 | Diaphoretic | Cool peripheries | CRT 5 seconds
 • ECG: complete AV block, escape rhythm at 32 bpm, LBBB morphology escape
 • Troponin I: 0.8 ng/mL (mildly elevated)
-
 Echo: inferior wall motion abnormality. LVEF 40%.`,
     progressive_data:["Atropine 600mcg IV ×2: HR 34→38 transiently then falls back to 32. MAP 50. No improvement.","Temporary transcutaneous pacing commenced: electrical capture at 60 bpm but MAP 52 — no haemodynamic improvement. Patient in significant pain from pacing.","Temporary transvenous pacing wire inserted via right femoral vein. Capture at 60 bpm. MAP improving to 68. Patient more comfortable.","Day 2: underlying rhythm: complete AV block with inferior STEMI pattern. Cardiology: PCI performed. Post-PCI: rhythm improving — second degree AV block (Mobitz I). Team asking about permanent pacemaker."],
     key_probes:["Complete heart block with MAP 49 — your immediate sequence of interventions.","Why did atropine fail and what does that tell you about the level of the block?","Transcutaneous vs transvenous pacing — why is transcutaneous only a bridge?","Electrical capture without mechanical capture — what is this and what are the causes?","Post-PCI AV block in inferior MI — when does it resolve and when do you implant a permanent pacemaker?"],
@@ -1029,13 +925,11 @@ Echo: inferior wall motion abnormality. LVEF 40%.`,
 {
     id:47, title:"Post-Arrest Myoclonus — Prognostication Dilemma", domain:"Cardiac & Post-Arrest Care", difficulty:"High",
     stem:`62M, found collapsed at home. OHCA — unknown rhythm (unwitnessed). Estimated downtime 15–20 minutes. CPR by ambulance crew. ROSC after 35 minutes total low-flow time.
-
 ICU Day 2:
 • TTM 36°C completed | Sedation being lightened
 • Within 30 minutes of stopping sedation: generalised myoclonic jerks developing
 • Jerks: multifocal, stimulus-sensitive, involving face and all four limbs
 • Continuous for 45 minutes — not responding to lorazepam 2mg IV
-
 GCS: E1V1M1 despite apparent 'movement'
 EEG: continuous generalised spike-wave discharges, no background activity`,
     progressive_data:["Levetiracetam 60 mg/kg IV given. No change in myoclonus. Clonazepam 1mg IV: partial reduction in jerk frequency.","Day 3: myoclonus persisting despite multiple antiepileptics. GCS E1V1M1. SSEP: bilateral absent N20. CT brain: diffuse cerebral oedema, loss of grey-white differentiation.","NSE at 72h: 164 mcg/L (laboratory upper normal 17). Family asking for prognosis — 'tell us the truth'.","Day 4: neurology review. Family and ICU team meeting. Withdrawal of life-sustaining treatment discussed."],
@@ -1046,11 +940,9 @@ EEG: continuous generalised spike-wave discharges, no background activity`,
 {
     id:48, title:"Post-ROSC on VA-ECMO — Venting, Anticoagulation & Complications", domain:"Cardiac & Post-Arrest Care", difficulty:"High",
     stem:`55M, anterior STEMI complicated by cardiac arrest. PCI performed, vessel opened. Refractory cardiogenic shock post-PCI — VA-ECMO cannulated (femoral arterial/venous, right side).
-
 VA-ECMO PARAMETERS (Hour 6):
 • Flow: 4.2 L/min | RPM: 3400 | FiO2 sweep 1.0
 • Norad 0.2 mcg/kg/min | MAP 68 | HR 96
-
 ECHO (Hour 6):
 • LV severely dilated (LVEDD 7.4 cm) | LVEF 10%
 • Aortic valve NOT opening (no pulse pressure on arterial line)
@@ -1063,15 +955,12 @@ ECHO (Hour 6):
 {
     id:49, title:"Cardiogenic Shock — Escalation to IABP/Impella/VA-ECMO", domain:"Cardiac & Post-Arrest Care", difficulty:"High",
     stem:`58M, anterior STEMI 6 hours ago. PCI performed at district hospital — TIMI 3 flow achieved. Transferred to tertiary centre for post-PCI monitoring.
-
 ARRIVAL:
 • HR 118 | BP 74/44 (MAP 54) | RR 28 | SpO2 90% on 10L | GCS 14
 • Cool peripheries | CRT 5 seconds | Bilateral crackles
-
 ECHO: Anterior and apical akinesis. LVEF 20%. No significant MR. No VSD.
 Troponin I: 48 ng/mL | BNP: 3800 pg/mL | Lactate: 5.2 mmol/L
 ScvO2: 48%
-
 CURRENT TREATMENT: Norad 0.3 mcg/kg/min + dobutamine 5 mcg/kg/min`,
     progressive_data:["1 hour: MAP 58, lactate 5.8, ScvO2 44%. Dobutamine increased to 10 mcg/kg/min. HR rising to 134. New VT run on monitor.","IABP inserted. MAP improving to 68 with IABP + norad 0.3 + dobutamine 5. Lactate 5.2. ScvO2 52%. Still inadequate.","Cardiology escalation: Impella CP inserted. CI improving 1.2→1.8 L/min/m2. MAP 72. ScvO2 58%. Lactate still rising 5.2→6.1.","Hour 6: CI 1.6, ScvO2 55%, lactate 6.8. ECMO team contacted. VA-ECMO being considered."],
     key_probes:["SCAI cardiogenic shock classification — where does this patient sit and what does that stage mandate?","IABP mechanism in cardiogenic shock — what does it do and what does IABP-SHOCK II tell you?","Impella CP — mechanism, haemodynamic effect, and how is it different from IABP?","ScvO2 48% despite MAP 58 — what does this tell you and what is your next step?","VA-ECMO as a last resort — at what point do you escalate and what are the reversibility criteria?"],
@@ -1081,13 +970,11 @@ CURRENT TREATMENT: Norad 0.3 mcg/kg/min + dobutamine 5 mcg/kg/min`,
 {
     id:50, title:"Type 2 MI in the ICU — Supply-Demand Mismatch", domain:"Cardiac & Post-Arrest Care", difficulty:"Medium",
     stem:`74F, admitted 3 days ago with septic shock from pneumonia. Intubated, ventilated, on noradrenaline 0.3 mcg/kg/min. Known hypertension, no known cardiac history.
-
 DAY 3 — NEW CONCERN:
 • Nurse calls: new ST changes on telemetry — downsloping ST depression V4–V6, T-wave inversions
 • HR has increased 88→114 over past 2 hours (sinus tachycardia)
 • MAP maintained 68 | Norad unchanged
 • Troponin I sent: result 4.2 ng/mL (HIGH) | Previous troponin Day 1: 0.8 ng/mL
-
 Echo (bedside): anterior hypokinesis. LVEF estimated 40% (was 55% on admission echo).`,
     progressive_data:["Cardiology review: 12-lead ECG confirms ST depression V4–V6. No STEMI pattern. Troponin rising 4.2→8.1 over 6 hours.","Discussion: Type 1 vs Type 2 MI. Cardiology wants urgent coronary angiography. You have concerns.","Management adjusted: HR controlled with low-dose beta-blocker (esmolol). MAP maintained. Haemoglobin 7.2 — transfusion to Hb >8 given. Norad weaned slightly.","Day 5: troponin trending down 8.1→5.2→2.8. ST changes resolving. Anterior hypokinesis improving. No angiography performed."],
     key_probes:["Type 1 MI vs Type 2 MI — define both and apply the distinction to this patient.","What specific factors in this ICU patient are causing supply-demand mismatch?","Cardiology wants urgent angiography. You disagree. Make your case.","What specific interventions reduce demand ischaemia in this patient — in order of priority?","Troponin rising in a critically ill patient — how do you counsel the family about this finding?"],
@@ -1097,7 +984,6 @@ Echo (bedside): anterior hypokinesis. LVEF estimated 40% (was 55% on admission e
 {
     id:51, title:"AKI in Septic Shock — Stage, Cause & RRT Timing", domain:"Renal & Fluids", difficulty:"High",
     stem:`64M, septic shock from community-acquired pneumonia. Day 3 ICU. On norad 0.22 mcg/kg/min.
-
 CURRENT:
 • MAP 68 | HR 94 | Temp 37.6°C | UO 12 mL/h despite 500 mL fluid challenge
 • Cr 3.8 (baseline 1.1) | K+ 5.9 | pH 7.22 | HCO3 12 | Lactate 3.1
@@ -1112,7 +998,6 @@ CURRENT:
 {
     id:52, title:"Contrast-Induced AKI — Prevention & Harm Reduction", domain:"Renal & Fluids", difficulty:"Medium",
     stem:`72F, CKD Stage 3b (eGFR 32, Cr baseline 1.8), T2DM, hypertension. Admitted with NSTEMI. Coronary angiography planned urgently (within 24h).
-
 CURRENT STATUS:
 • Haemodynamically stable | MAP 78 | HR 82
 • Metformin 1g BD (last dose this morning) | ACEi (perindopril) | NSAIDs (naproxen for osteoarthritis)
@@ -1126,7 +1011,6 @@ CURRENT STATUS:
 {
     id:53, title:"Hepatorenal Syndrome — Diagnosis & Management", domain:"Renal & Fluids", difficulty:"High",
     stem:`58M, known alcohol-related cirrhosis (Child-Pugh C, MELD 28). Admitted with spontaneous bacterial peritonitis (SBP confirmed — ascitic neutrophil count 480 cells/mm3).
-
 ICU DAY 2:
 • MAP 54 | HR 116 | Temp 38.2°C | SpO2 94% on 3L
 • GCS 12 (encephalopathy grade II)
@@ -1142,13 +1026,11 @@ ICU DAY 2:
 {
     id:54, title:"CRRT Prescription — Dose, Anticoagulation & Filter Life", domain:"Renal & Fluids", difficulty:"High",
     stem:`56M, septic shock from peritonitis. Day 2 ICU. AKI Stage 3 (anuric). CRRT initiated.
-
 CRRT SETUP:
 • Mode: CVVHDF | Blood flow: 200 mL/min
 • Effluent dose prescribed: 25 mL/kg/h
 • Anticoagulation: unfractionated heparin via pre-filter at 500 units/h
 • Filter: AN69 membrane | Pre-dilution: 50%
-
 6 HOURS IN:
 • Filter clotted — transmembrane pressure alarm
 • Access pressure: -240 mmHg (high negative — suction)
@@ -1162,7 +1044,6 @@ CRRT SETUP:
 {
     id:55, title:"Fluid Resuscitation — When to Stop & Fluid Overload Harm", domain:"Renal & Fluids", difficulty:"High",
     stem:`52M, septic shock from cholangitis. Now 48 hours post-ICU admission. Has received 8 litres crystalloid.
-
 CURRENT STATUS:
 • MAP 68 on norad 0.18 mcg/kg/min | HR 96 | Temp 37.4°C
 • SpO2 92% on FiO2 0.45, PEEP 8 (new requirement — was on 3L O2 yesterday)
@@ -1178,7 +1059,6 @@ CURRENT STATUS:
 {
     id:56, title:"Hyponatraemia in ICU — Diagnosis & Safe Correction", domain:"Renal & Fluids", difficulty:"High",
     stem:`44F, admitted with severe community-acquired meningitis. Day 3 ICU. Intubated, sedated.
-
 ELECTROLYTES Day 3:
 • Na 118 mmol/L (was 132 on admission, 126 yesterday)
 • K+ 3.8 | Cr 0.9 | Glucose 6.2
@@ -1186,7 +1066,6 @@ ELECTROLYTES Day 3:
 • Urine Na: 68 mmol/L (high) | Urine osmolality: 680 mOsm/kg (high)
 • Fluid balance: +2.1L since admission
 • On IV maintenance fluids 0.9% NaCl 1L/8h
-
 New concern: EEG showing epileptiform activity (new).`,
     progressive_data:["CT brain: cerebral oedema, compressed ventricles. Na now 116 mmol/L. Team debating 3% NaCl vs DDAVP restriction.","3% NaCl 150 mL IV over 20 min given. Na 116→121 over 4 hours. Seizures stopped. Cerebral oedema improving on repeat CT.","Na now 126. Team wants to continue correcting rapidly to normalise.","Day 5: Na 138 — corrected by 22 mmol/L in 24h. New MRI: T2 hyperintensity in pons and basal ganglia — osmotic demyelination syndrome suspected."],
     key_probes:["Hyponatraemia classification — work through the diagnostic algorithm for this patient.","Urine Na 68, urine osmolality 680, serum osmolality 248 — what is the diagnosis?","Na 116 with seizures and cerebral oedema — this is symptomatic hyponatraemia. How do you treat it urgently?","Safe correction rate for hyponatraemia — what is the target rise per 24h and why?","Osmotic demyelination syndrome — what caused it, what are the risk factors, and can it be reversed?"],
@@ -1196,7 +1075,6 @@ New concern: EEG showing epileptiform activity (new).`,
 {
     id:57, title:"Hyperkalaemia — Graded Management in ICU", domain:"Renal & Fluids", difficulty:"Medium",
     stem:`68M, CKD Stage 4 (eGFR 22), T2DM, heart failure (LVEF 35%) on spironolactone + ACEi + furosemide. Admitted with AKI on CKD following gastroenteritis and dehydration.
-
 ICU ADMISSION:
 • MAP 72 | HR 88 | GCS 15
 • K+ 7.2 mmol/L | Cr 6.1 (baseline 3.1) | pH 7.24 | HCO3 14
@@ -1209,11 +1087,9 @@ ICU ADMISSION:
 {
     id:58, title:"Rhabdomyolysis — AKI Prevention & Management", domain:"Renal & Fluids", difficulty:"Medium",
     stem:`28M, found collapsed at home — been on the floor for estimated 18–24 hours after drug ingestion (cocaine + alcohol). Found unresponsive, both legs trapped under body.
-
 ED ARRIVAL:
 • GCS 12 (improving) | HR 118 | BP 102/64 | RR 22 | Temp 38.8°C
 • SpO2 95% on 4L | Urine: dark brown (cola-coloured)
-
 LABS:
 • CK: 128,000 IU/L | Cr 2.4 (baseline unknown, estimated 0.9) | K+ 5.8
 • Urine myoglobin: strongly positive
@@ -1227,12 +1103,9 @@ LABS:
 {
     id:59, title:"Acid-Base Disorders — Systematic Interpretation in ICU", domain:"Renal & Fluids", difficulty:"High",
     stem:`66M, intubated for 5 days following severe pneumonia. Septic shock, now haemodynamically improving on low-dose norad.
-
 ABG (current):
 pH 7.48 | PaCO2 28 | PaO2 82 | HCO3 20 | BE -4 | Na 138 | Cl 112 | Lactate 1.2
-
 VENTILATOR: VCV | RR 22 | VT 500 mL | PEEP 8 | FiO2 0.4
-
 MEDICATION: Furosemide 80mg IV BD (started yesterday for fluid overload)
 PREVIOUS ABG (Day 1): pH 7.28 | PaCO2 42 | HCO3 19 | Lactate 5.8`,
     progressive_data:["Team decides to reduce RR to 14 to correct the respiratory alkalosis. 2h later: pH 7.41, PaCO2 38, HCO3 20.","Furosemide continued. Day 7 ABG: pH 7.52 | PaCO2 44 | HCO3 34 | Cl 98 | Na 138. UO has been >100 mL/h.","Team asks: the ventilator is 'fine' now, why is the pH still high? What is the new diagnosis?","K+ 2.8 noted on Day 7. Na 138. Urine Cl <20 mmol/L. Patient comatose on sedation — cannot assess symptoms."],
@@ -1243,14 +1116,11 @@ PREVIOUS ABG (Day 1): pH 7.28 | PaCO2 42 | HCO3 19 | Lactate 5.8`,
 {
     id:60, title:"Massive Transfusion Protocol — Trauma Haemorrhage", domain:"Renal & Fluids", difficulty:"High",
     stem:`32M, motorcycle vs truck. Brought to trauma bay. Multiple injuries identified.
-
 TRAUMA ASSESSMENT:
 • GCS 10 (E2V3M5) | HR 138 | BP 72/40 (MAP 51) | RR 32 | Temp 35.8°C
 • Distended abdomen | Pelvis unstable | Right femur fracture | Open tib-fib left
-
 FAST exam: large free fluid in abdomen | Left haemothorax on CXR
 Primary survey injuries: splenic laceration (Grade IV), pelvic ring disruption
-
 LABS:
 • Hb 7.2 | Plt 88 | INR 1.8 | Fibrinogen 1.2 g/L | Lactate 6.8 | pH 7.21 | Temp 35.2°C
 • Base excess: -12`,
@@ -1262,17 +1132,14 @@ LABS:
 {
     id:61, title:"Polytrauma — Primary Survey, Damage Control & ICU Priorities", domain:"Trauma & Peri-operative", difficulty:"High",
     stem:`24M, pedestrian vs HGV. Multiple injuries. Brought directly to trauma bay.
-
 PRIMARY SURVEY:
 • Airway: noisy breathing, blood in oropharynx — talking in short sentences
 • Breathing: RR 32, reduced air entry left, trachea central
 • Circulation: HR 142, BP 68/40, abdomen rigid and distended
 • Disability: GCS 12 (E3V3M6), pupils equal and reactive
 • Exposure: open femur fracture left, pelvis unstable
-
 FAST: large free fluid abdomen, no pericardial effusion
 CXR: left haemothorax, no pneumothorax
-
 Temp 35.4°C | pH 7.18 | Lactate 8.2 | BE -14 | Hb 8.1 | INR 2.1 | Fibrinogen 0.9 g/L`,
     progressive_data:["Airway secured (RSI ketamine/roc). Left chest drain: 1200 mL blood immediately. BP improving to 82/50.","Damage control surgery: splenectomy + pelvic packing + external fixator left femur. Abdomen left open. Time in theatre: 68 min.","ICU post-op: Temp 33.8°C, pH 7.22, INR 1.9, Fibrinogen 1.1, Hb 8.4. Norad 0.4 + vasopressin 0.03. MAP 62.","24h: damage control resuscitation ongoing. Temp 36.4°C, pH 7.32, INR 1.3, Fibrinogen 1.8. Haemodynamics improving."],
     key_probes:["Primary survey — you have 30 seconds. What are the immediate life threats and in what order do you address them?","Massive haemothorax — criteria and immediate management.","Damage control surgery — define it and when do you call 'enough' and get out of the abdomen?","ICU post-damage control — what are the resuscitation endpoints of the lethal triad correction?","24h: haemodynamics stable, lethal triad corrected. When do you take him back for definitive surgery?"],
@@ -1282,16 +1149,13 @@ Temp 35.4°C | pH 7.18 | Lactate 8.2 | BE -14 | Hb 8.1 | INR 2.1 | Fibrinogen 0.
 {
     id:62, title:"TBI + Coagulopathy — Trauma-Induced Coagulopathy", domain:"Trauma & Peri-operative", difficulty:"High",
     stem:`19M, fell from 3rd floor. Polytrauma — TBI (GCS 7, bilateral contusions on CT), splenic laceration Grade III managed non-operatively, right rib fractures 4–8.
-
 ICU ADMISSION:
 • GCS 7 (E1V2M4) | ICP monitor inserted — ICP 24, CPP 56
 • MAP 78 | HR 104 | Temp 35.6°C | Hb 9.2
-
 COAGULATION:
 • INR 2.4 | APTT 62s | Fibrinogen 0.8 g/L | Plt 68
 • TEG: R-time prolonged, angle reduced, MA 42, LY30 3%
 • D-dimer >20 mg/L
-
 Radiologist report: CT shows cerebral contusions with haemorrhagic evolution on 4h CT — contusion expanding.`,
     progressive_data:["Neurosurgery review: contusions expanding — ICP rising to 32. No surgical lesion. Medical ICP management only.","FFP 4 units + fibrinogen concentrate 4g + platelets 1 pool given. 2h: INR 1.6, fibrinogen 1.4, Plt 88. ICP falling to 22.","TXA question raised: the ED gave TXA 1g on arrival (2 hours ago). Neurosurgery asks if a second dose should be given.","Day 3: ICP controlled. GCS improving to 9. Fever 38.8°C. Na 148 (rising). Urine output 380 mL/h. Concern: diabetes insipidus vs osmotic therapy effect."],
     key_probes:["Trauma-induced coagulopathy — what causes it and why does it differ from DIC?","TEG R-time prolonged + low MA + normal LY30 — interpret each component and what does it mandate?","Expanding cerebral contusion + coagulopathy — how do you correct coagulopathy without worsening cerebral oedema?","TXA in TBI — what does the CRASH-3 trial show and does it change your answer here?","Day 3: urine output 380 mL/h, Na 148 — SIADH vs DI vs osmotherapy effect — how do you differentiate?"],
@@ -1301,13 +1165,11 @@ Radiologist report: CT shows cerebral contusions with haemorrhagic evolution on 
 {
     id:63, title:"Fat Embolism Syndrome — Post-Long Bone Fracture", domain:"Trauma & Peri-operative", difficulty:"Medium",
     stem:`22M, right femur fracture following motorbike accident. Managed conservatively (external fixator) Day 1. Now Day 2.
-
 NEW PRESENTATION:
 • GCS deteriorating 15→11 over 6 hours | Confused
 • HR 118 | BP 104/68 | RR 32 | Temp 38.6°C
 • SpO2 86% on 10L O2 | New bilateral crackles
 • Petechial rash: upper chest, axillae, conjunctivae
-
 ABG (FiO2 0.6): pH 7.46 | PaCO2 28 | PaO2 62 | Lactate 1.8
 CXR: bilateral diffuse infiltrates
 Platelet count: 68 (was 188 yesterday) | Fat globules in urine`,
@@ -1319,7 +1181,6 @@ Platelet count: 68 (was 188 yesterday) | Fat globules in urine`,
 {
     id:64, title:"Post-operative Septic Shock — Source Control Principles", domain:"Trauma & Peri-operative", difficulty:"High",
     stem:`68F, elective right hemicolectomy for cancer. Experienced anastomotic leak on Day 4 post-op, taken back to theatre — Hartmann's procedure performed, abdomen washed out.
-
 NOW DAY 7 (3 days after re-operation):
 • Still in ICU | Intubated | Norad 0.28 mcg/kg/min
 • MAP 66 | HR 108 | Temp 38.6°C | WBC 22
@@ -1334,13 +1195,11 @@ NOW DAY 7 (3 days after re-operation):
 {
     id:65, title:"Peri-operative Cardiac Risk — High-Risk Non-Cardiac Surgery", domain:"Trauma & Peri-operative", difficulty:"Medium",
     stem:`72M, known ischaemic cardiomyopathy (LVEF 30%, stable), CKD Stage 3, T2DM. Presenting for elective open AAA repair (9.2 cm aneurysm, symptomatic).
-
 PRE-OPERATIVE ASSESSMENT:
 • RCRI score calculated: 4 factors (ischaemic heart disease, heart failure, CKD, insulin-dependent DM)
 • Estimated peri-operative MACE risk: >10%
 • Cardiology review: LVEF 30%, no reversible ischaemia on stress imaging, optimised medically
 • Current medications: bisoprolol 2.5mg, ramipril 5mg, atorvastatin, aspirin, insulin
-
 Surgeon plans: open repair under GA + epidural. ICU post-op.`,
     progressive_data:["Intra-operative: haemodynamics stable. Cross-clamp time 48 min. Estimated blood loss 1800 mL. Received 2 units pRBC.","ICU post-op Hour 2: Troponin I 0.4 ng/mL (borderline). ECG: new ST depression V4–V6. MAP 72 on norad 0.12 mcg/kg/min.","Hour 6: Troponin rising 0.4→2.8 ng/mL. New anterior hypokinesis on echo. GCS 15 — no chest pain (epidural).","Cardiology: urgent coronary angiography discussed. Cr 2.1 (baseline 1.4). Team weighing risks."],
     key_probes:["RCRI score 4 — what does this mean and how does it change your peri-operative planning?","Which medications must you NOT stop before major surgery — and which ones do you stop?","Post-op troponin rising with new anterior hypokinesis — Type 1 or Type 2 MI? How do you decide?","Urgent coronary angiography in a patient with Cr 2.1 post-AAA repair — risks and how do you mitigate them?","MINS (myocardial injury after non-cardiac surgery) — definition and does it change management?"],
@@ -1350,7 +1209,6 @@ Surgeon plans: open repair under GA + epidural. ICU post-op.`,
 {
     id:66, title:"Abdominal Compartment Syndrome — Recognition & Management", domain:"Trauma & Peri-operative", difficulty:"High",
     stem:`55M, severe acute pancreatitis (BISAP score 4, CTSI Grade E). Admitted 5 days ago. Aggressive fluid resuscitation: +14 litres in 5 days.
-
 CURRENT STATUS:
 • Intubated | Norad 0.3 mcg/kg/min | MAP 68
 • RR 28 on vent | Peak airway pressures rising 32→44 cmH2O
@@ -1365,13 +1223,11 @@ CURRENT STATUS:
 {
     id:67, title:"Pulmonary Contusion — Ventilator Strategy & Complications", domain:"Trauma & Peri-operative", difficulty:"Medium",
     stem:`35M, restrained driver, high-speed RTC. Chest deformity, paradoxical chest wall movement right.
-
 CT CHEST:
 • Right pulmonary contusion (2/3 right lung involved)
 • Right flail chest (ribs 3–9 posterior)
 • No pneumothorax | No haemothorax
 • Small right pleural effusion
-
 ICU ADMISSION:
 • HR 112 | BP 108/68 | RR 36 | SpO2 88% on 15L NRB | Temp 37.4°C
 • GCS 14 | Severe right chest wall pain | Cannot take deep breath
@@ -1384,7 +1240,6 @@ ICU ADMISSION:
 {
     id:68, title:"Spinal Surgery Complications — Epidural Haematoma & Cord Ischaemia", domain:"Trauma & Peri-operative", difficulty:"High",
     stem:`62M, multilevel cervical decompression and fusion (C3–C7) for cervical myelopathy. Anterior and posterior approach. Intraoperative blood loss 1400 mL — received 2 units pRBC.
-
 POST-OP DAY 1 — 18 HOURS AFTER SURGERY:
 • Previously moving all four limbs (grade 4/5)
 • NOW: complete loss of power both arms | Legs: 2/5 | Cannot raise arms off bed
@@ -1399,7 +1254,6 @@ POST-OP DAY 1 — 18 HOURS AFTER SURGERY:
 {
     id:69, title:"Burns Critical Care — Fluid Resuscitation & Airway", domain:"Trauma & Peri-operative", difficulty:"High",
     stem:`38M, house fire. Brought by ambulance. Face and airway involvement.
-
 ED ARRIVAL:
 • GCS 14 | HR 128 | BP 108/72 | RR 26 | SpO2 94% on 15L NRB
 • Burns assessment: face and neck (singed eyebrows, nasal hair), anterior chest, bilateral arms
@@ -1414,13 +1268,11 @@ ED ARRIVAL:
 {
     id:70, title:"Pre-eclampsia & Eclampsia in ICU", domain:"Trauma & Peri-operative", difficulty:"High",
     stem:`28F, 36 weeks gestation. Primigravida. Admitted with severe headache and visual disturbance.
-
 ED ASSESSMENT:
 • GCS 14 | HR 108 | BP 182/118 | RR 22 | Temp 37.1°C
 • SpO2 96% on room air | 3+ proteinuria | Peripheral oedema
 • Reflexes: brisk with 2 beats of clonus
 • Fundoscopy: papilloedema
-
 LABS:
 • Plt 68 ×10⁹/L (falling) | LDH 880 | AST 620 | ALT 480
 • Hb 9.2 | Cr 1.4 | Bili 48 | Fibrinogen 2.1 g/L
@@ -1433,12 +1285,10 @@ LABS:
 {
     id:71, title:"Paracetamol Overdose — NAC Protocol & Liver Failure", domain:"Toxicology & Metabolic", difficulty:"High",
     stem:`22F, deliberate self-harm. Paracetamol ingestion — 32 tablets (500mg each = 16g) taken approximately 10 hours ago. Brought in by friend.
-
 ED ARRIVAL:
 • GCS 15 | HR 104 | BP 112/72 | RR 18 | Temp 37.1°C
 • Nausea and vomiting | Right upper quadrant tenderness
 • No jaundice yet
-
 LABS:
 • Paracetamol level: 180 mg/L at 10 hours post-ingestion
 • ALT 280 | AST 420 | Bili 28 | INR 1.4 | Cr 0.9
@@ -1451,12 +1301,10 @@ LABS:
 {
     id:72, title:"Tricyclic Antidepressant Overdose — Cardiac Toxicity", domain:"Toxicology & Metabolic", difficulty:"High",
     stem:`35M, found unresponsive at home. Empty blister packs of amitriptyline 25mg (estimated 50 tablets = 1250mg) found nearby. Time of ingestion unknown — estimated 1–3 hours ago.
-
 ED ARRIVAL:
 • GCS 8 (E2V2M4) | HR 142 | BP 72/40 (MAP 51) | RR 24 | Temp 37.8°C
 • SpO2 90% on 15L NRB | Pupils dilated 6mm bilaterally
 • Dry skin | Urinary retention | Absent bowel sounds
-
 ECG: sinus tachycardia 142 bpm, QRS 148 ms (broad complex), QTc 520 ms, R wave in aVR 4mm`,
     progressive_data:["Intubated (RSI ketamine/roc). Post-intubation: BP 62/38. Further deterioration. Sodium bicarbonate 100 mmol IV given.","20 minutes post-bicarb: QRS narrowing 148→110 ms. MAP improving to 68. Norad 0.2 mcg/kg/min.","2 hours: runs of broad complex VT. QRS 130 ms despite bicarb. pH 7.44 (alkalotic). BP 64/40.","Total bicarb given: 300 mmol. pH 7.52. QRS still 128 ms. VT runs continuing. Team considering lipid emulsion and ECMO."],
     key_probes:["TCA toxicity mechanism — cardiac and CNS effects. Why is QRS width the key ECG marker?","Sodium bicarbonate in TCA toxicity — two distinct mechanisms. What is the pH target?","QRS 148 ms with hypotension — your immediate management sequence.","VT in TCA toxicity — which antiarrhythmics are safe and which are contraindicated?","pH 7.52 and still deteriorating — what is your next escalation step?"],
@@ -1466,13 +1314,11 @@ ECG: sinus tachycardia 142 bpm, QRS 148 ms (broad complex), QTc 520 ms, R wave i
 {
     id:73, title:"Serotonin Syndrome vs Neuroleptic Malignant Syndrome", domain:"Toxicology & Metabolic", difficulty:"High",
     stem:`32F, psychiatric inpatient on venlafaxine 225mg OD + olanzapine 10mg OD. Four days ago: started tramadol 100mg QDS for back pain by GP. Now acute presentation.
-
 ED ARRIVAL:
 • GCS 12 | HR 148 | BP 168/104 | RR 28 | Temp 40.2°C
 • SpO2 94% on 4L | Diaphoretic | Agitated | Tremulous
 • Clonus: bilateral ankle clonus 3–4 beats | Hyperreflexia throughout
 • Pupils: dilated 7mm bilaterally | No rigidity
-
 CK: 1800 IU/L | Na 138 | Cr 1.2 | WBC 14`,
     progressive_data:["All serotonergic agents stopped. IV benzodiazepines (diazepam 10mg IV): partial improvement — HR 128, agitation partially controlled.","Cyproheptadine 8mg via NGT given. Temperature: 40.2→38.8°C over 4 hours.","24h: HR 98, temp 37.6°C, clonus resolving, reflexes normalising. CK peaked 3200.","Day 3: fully recovered neurologically. Psychiatry review: medication plan revised."],
     key_probes:["Serotonin syndrome vs neuroleptic malignant syndrome — how do you distinguish them at the bedside?","Hunter Serotonin Toxicity Criteria — apply them to this patient.","The specific drug combination causing this — which agents interact and what is the mechanism?","Cyproheptadine — mechanism of action and evidence base in serotonin syndrome.","Temperature 40.2°C — when does hyperthermia in toxicological emergencies become a life-threatening priority?"],
@@ -1482,7 +1328,6 @@ CK: 1800 IU/L | Na 138 | Cr 1.2 | WBC 14`,
 {
     id:74, title:"Organophosphate Poisoning — Cholinergic Crisis", domain:"Toxicology & Metabolic", difficulty:"High",
     stem:`45M, farmer. Brought in confused, excessive secretions. Family report he was spraying pesticides without protective equipment.
-
 ED ARRIVAL:
 • GCS 10 | HR 42 | BP 78/44 | RR 8 (shallow) | Temp 37.2°C
 • SpO2 72% on room air
@@ -1497,12 +1342,10 @@ ED ARRIVAL:
 {
     id:75, title:"Lithium Toxicity — Diagnosis & Management", domain:"Toxicology & Metabolic", difficulty:"Medium",
     stem:`62F, bipolar disorder on lithium carbonate 800mg BD for 10 years (stable therapeutic levels). Three days of vomiting and diarrhoea (gastroenteritis). Now confused and tremulous.
-
 ICU ADMISSION:
 • GCS 11 (E3V3M5) | HR 88 | BP 118/72 | RR 18 | Temp 37.2°C
 • Coarse tremor | Ataxia | Hyperreflexia | Myoclonus
 • No anticholinergic features | No diaphoresis
-
 LABS:
 • Lithium level: 3.8 mmol/L (therapeutic range 0.6–1.2 mmol/L)
 • Na 134 | Cr 2.8 (baseline 1.1) | K+ 3.2 | Urea 18
@@ -1515,12 +1358,10 @@ LABS:
 {
     id:76, title:"Thyroid Storm — Diagnosis & Emergency Management", domain:"Toxicology & Metabolic", difficulty:"High",
     stem:`38F, known Graves' disease, non-compliant with carbimazole. Admitted with 3 days of worsening agitation, palpitations, and high fever following influenza infection.
-
 ICU ADMISSION:
 • GCS 13 | HR 168 (AF) | BP 158/88 | RR 32 | Temp 40.8°C
 • SpO2 94% on 4L | Exophthalmos | Diffuse goitre | Warm skin, diaphoresis
 • Agitated and confused | Fine tremor throughout
-
 LABS:
 • TSH: <0.01 mIU/L (suppressed) | Free T4: 82 pmol/L (markedly elevated)
 • Free T3: 28 pmol/L (markedly elevated)
@@ -1533,12 +1374,10 @@ LABS:
 {
     id:77, title:"Adrenal Crisis in ICU — Recognition & Steroid Replacement", domain:"Toxicology & Metabolic", difficulty:"Medium",
     stem:`54M, known Addison's disease on hydrocortisone 20mg AM + 10mg PM + fludrocortisone. Admitted with urosepsis. On the ward for 2 days, now transferred to ICU.
-
 ICU TRANSFER:
 • MAP 48 on norad 0.3 mcg/kg/min — not responding to fluids or antibiotics
 • HR 128 | Temp 38.8°C | GCS 13
 • Na 128 | K+ 6.2 | Glucose 2.8 | Cr 2.4
-
 NURSE NOTE: patient has been vomiting for 3 days — unable to take his oral steroids. No sick day rules applied. No IV steroid given on ward.`,
     progressive_data:["Hydrocortisone 100mg IV bolus given immediately. Within 2 hours: MAP improving 48→68. Norad weaning.","6h: MAP 72, norad 0.1 mcg/kg/min. Na 131 (improving). Glucose 5.4 after dextrose.","ICU Day 2: haemodynamics stable. Team discussing: continue 100mg QDS or switch to stress-dose schedule?","Day 5: sepsis resolving. Patient eating. Plan: step down to oral hydrocortisone — what is the dose and schedule?"],
     key_probes:["Adrenal crisis — clinical features and why does it cause refractory shock?","This patient has known Addison's and has been vomiting — at what point should sick day rules have been applied?","Hydrocortisone dose in adrenal crisis — what is the loading dose, maintenance, and why not dexamethasone?","Refractory shock in ICU — when do you give empirical hydrocortisone even without known adrenal disease?","Stepping down from stress-dose steroids — what is the taper and what are the risks of stopping too quickly?"],
@@ -1548,11 +1387,9 @@ NURSE NOTE: patient has been vomiting for 3 days — unable to take his oral ste
 {
     id:78, title:"Diabetic Ketoacidosis — Severe & Complicated", domain:"Toxicology & Metabolic", difficulty:"Medium",
     stem:`28M, Type 1 DM. Three days of vomiting. Found at home, minimally responsive.
-
 ED ARRIVAL:
 • GCS 10 (E2V3M5) | HR 128 | BP 88/52 (MAP 63) | RR 36 (Kussmaul) | Temp 37.8°C
 • SpO2 96% on 4L | Dry mucous membranes | Fruity breath | Sunken eyes
-
 LABS:
 • Glucose 48 mmol/L | pH 7.04 | HCO3 4 | PaCO2 12 | Anion gap 32
 • K+ 6.8 (before treatment) | Na 128 | Cr 2.8 | Urea 24
@@ -1566,7 +1403,6 @@ LABS:
 {
     id:79, title:"Hyperammonaemia & Acute Liver Failure — Cerebral Oedema", domain:"Toxicology & Metabolic", difficulty:"High",
     stem:`34M, no known liver disease. Acute presentation — 5 days of jaundice, progressive confusion, found comatose.
-
 ICU ADMISSION:
 • GCS 6 (E1V1M4) | HR 116 | BP 98/54 (MAP 69 on norad 0.2) | Temp 38.2°C
 • Jaundice ++ | Fetor hepaticus | Asterixis (pre-coma finding)
@@ -1582,12 +1418,10 @@ ICU ADMISSION:
 {
     id:80, title:"Methanol & Ethylene Glycol Poisoning", domain:"Toxicology & Metabolic", difficulty:"High",
     stem:`48M, found confused at home. History from paramedics: known alcohol dependence, no commercial alcohol available — may have drunk windscreen washer fluid or antifreeze.
-
 ED ARRIVAL:
 • GCS 11 | HR 118 | BP 102/68 | RR 32 | Temp 37.4°C
 • SpO2 96% on 4L | Visual complaint: 'everything blurry, lights have halos'
 • Pupils: 5mm, sluggish
-
 LABS:
 • pH 7.08 | HCO3 6 | PaCO2 16 | Anion gap 38 | Lactate 1.4
 • Na 138 | Glucose 6.2 | Osmolality measured: 348 mOsm/kg
@@ -1602,11 +1436,9 @@ LABS:
 {
     id:81, title:"Severe Falciparum Malaria — ICU Management", domain:"Special Infections", difficulty:"High",
     stem:`32M, returned from sub-Saharan Africa 8 days ago. Five days of fever, rigors, myalgia. Now confused.
-
 ICU ARRIVAL:
 • GCS 10 | HR 128 | BP 82/44 (MAP 57) | Temp 40.2°C | RR 28
 • SpO2 90% on 6L | Jaundice | Splenomegaly | Mottled
-
 LABS:
 • Malaria film: Plasmodium falciparum, parasitaemia 12%
 • Hb 6.8 | Plt 28 | WBC 3.2 | Cr 3.8 | Bili 148 | ALT 280
@@ -1620,12 +1452,10 @@ LABS:
 {
     id:82, title:"HIV in ICU — Opportunistic Infections & IRIS", domain:"Special Infections", difficulty:"High",
     stem:`38M, HIV-positive, CD4 count 28 cells/µL, not on ART. Three weeks progressive breathlessness and dry cough.
-
 ICU ADMISSION:
 • GCS 14 | HR 112 | BP 108/68 | RR 34 | Temp 38.6°C
 • SpO2 82% on 15L NRB | Bilateral fine crackles
 • Oral thrush | Wasting ++
-
 ABG (FiO2 0.8): pH 7.46 | PaCO2 28 | PaO2 58 | Lactate 1.6
 CT chest: bilateral ground-glass opacification, perihilar distribution
 LDH: 820 IU/L | Beta-D-glucan: 680 pg/mL`,
@@ -1637,12 +1467,10 @@ LDH: 820 IU/L | Beta-D-glucan: 680 pg/mL`,
 {
     id:83, title:"Meningococcal Septicaemia — Purpura Fulminans & DIC", domain:"Special Infections", difficulty:"High",
     stem:`18M, previously healthy. 12 hours of fever, headache. Now brought in by ambulance — deteriorating rapidly.
-
 ED ARRIVAL:
 • GCS 11 | HR 148 | BP 62/38 (MAP 46) | RR 34 | Temp 39.8°C
 • Non-blanching petechial and purpuric rash — spreading as you examine
 • Neck stiffness | Photophobia
-
 LABS:
 • WBC 24 | Plt 28 | CRP 420 | PCT 68 | Lactate 8.2
 • PT 28s | APTT 88s | Fibrinogen 0.6 g/L | D-dimer >20 mg/L
@@ -1656,14 +1484,11 @@ LABS:
 {
     id:84, title:"Infective Endocarditis — ICU Complications", domain:"Special Infections", difficulty:"High",
     stem:`52M, IV drug user. Three weeks of fever. Referred from cardiology ward after deterioration.
-
 ICU ADMISSION:
 • HR 122 | BP 78/44 (MAP 55) | RR 28 | Temp 39.2°C | GCS 13
 • Splinter haemorrhages | Janeway lesions | New pansystolic murmur
-
 ECHO (TOE): large vegetation (2.1 cm) on tricuspid valve. Severe tricuspid regurgitation. Moderate pericardial effusion.
 Blood cultures: MRSA (3/3 bottles)
-
 CHEST CT: multiple bilateral septic emboli | Right-sided empyema`,
     progressive_data:["Vancomycin + gentamicin started. Day 3: new left arm weakness — MRI brain: embolic infarcts, no haemorrhage.","Cardiothoracic surgery review: early surgery discussed. Vegetations >1 cm, recurrent emboli, MRSA — surgery within 72h recommended.","Pre-operatively: Hb 7.2, Plt 68, INR 2.1. Surgeon asks about bridging anticoagulation.","Post-op Day 2: extubated. New fever. Echo: no residual vegetation. CXR: worsening empyema. Drain in poor position."],
     key_probes:["Indications for emergency surgery in infective endocarditis — what are they?","MRSA endocarditis antibiotic regimen — vancomycin dose, monitoring, and when do you add rifampicin?","Embolic stroke in endocarditis — does this change your surgical timing?","Empyema complicating right-sided endocarditis — management and relationship to the primary infection.","Post-op fever in endocarditis — your systematic approach to identifying the source."],
@@ -1673,11 +1498,9 @@ CHEST CT: multiple bilateral septic emboli | Right-sided empyema`,
 {
     id:85, title:"Neutropenic Fever & Septic Shock — Haematological Malignancy", domain:"Special Infections", difficulty:"High",
     stem:`58M, AML (acute myeloid leukaemia), day 12 post-induction chemotherapy. Bone marrow suppression nadir. Transferred from haematology with rigors and hypotension.
-
 ICU ADMISSION:
 • GCS 14 | HR 134 | BP 72/38 (MAP 49) | RR 28 | Temp 39.8°C → 36.2°C (temperature trending down)
 • SpO2 90% on 6L | Severe mucositis | No focal infection identified
-
 LABS:
 • WBC 0.2 (neutrophils 0.08 ×10⁹/L — profound neutropenia) | Plt 12 | Hb 7.4
 • CRP 380 | PCT 42 | Blood cultures ×4 taken
@@ -1690,11 +1513,9 @@ LABS:
 {
     id:86, title:"Herpes Encephalitis — Diagnosis & Aciclovir Management", domain:"Special Infections", difficulty:"Medium",
     stem:`44F, previously healthy. Five days of progressive headache, fever, and behavioural change — disinhibition, aggression. Now acutely confused.
-
 ICU ADMISSION:
 • GCS 11 (E3V3M5) | HR 104 | BP 142/88 | Temp 38.8°C | RR 20
 • Disoriented | Agitated | Recent-onset focal seizures (right-sided)
-
 CT head: subtle left temporal lobe low density — no mass effect, no haemorrhage
 EEG: focal left temporal periodic lateralised discharges (PLEDs)
 LP: WBC 88 (lymphocytes predominantly) | RBC 22 | Protein 1.2 g/L | Glucose 3.2 (serum 5.8)
@@ -1707,13 +1528,11 @@ CSF HSV PCR: pending`,
 {
     id:87, title:"Clostridium difficile — Severe & Fulminant Colitis in ICU", domain:"Special Infections", difficulty:"Medium",
     stem:`74F, admitted 2 weeks ago for total hip replacement. Received cefuroxime perioperative prophylaxis + co-amoxiclav for wound infection Day 5. Now Day 14.
-
 NEW CONCERN:
 • Eight loose watery stools/day for 3 days
 • Abdomen: distending, diffuse tenderness, absent bowel sounds
 • HR 118 | BP 88/52 (MAP 63) | Temp 38.8°C | GCS 14
 • WBC 38 | Cr 2.8 (baseline 1.0) | Albumin 20 g/L | Lactate 3.8
-
 CT abdomen: pancolitis, colonic wall thickening, pericolic fat stranding, free fluid. No perforation.
 C. difficile toxin A/B: POSITIVE`,
     progressive_data:["Fulminant C. difficile diagnosed. Oral vancomycin 500mg QDS + IV metronidazole 500mg TDS started. All other antibiotics stopped.","24h: WBC 44 (rising), abdomen worsening, increasing distension. MAP 56 on norad 0.3 mcg/kg/min.","Surgical review: total colectomy offered. High operative risk (age 74, albumin 20, AKI). Family meeting.","Fidaxomicin considered — unavailable. Faecal microbiota transplant (FMT) discussed as salvage."],
@@ -1724,12 +1543,10 @@ C. difficile toxin A/B: POSITIVE`,
 {
     id:88, title:"Immunosuppressed Patient — Risk Stratification & Empirical Treatment", domain:"Special Infections", difficulty:"High",
     stem:`62M, renal transplant (8 years), on tacrolimus + mycophenolate + prednisolone. Admitted with 2 weeks worsening headache, fever, and confusion.
-
 ICU ADMISSION:
 • GCS 12 | HR 108 | BP 118/72 | Temp 38.4°C | RR 22 | SpO2 95% on 3L
 • Meningism present | Photophobia | No focal neurology
 • No rash
-
 LP:
 • Opening pressure 38 cmH2O (elevated)
 • WBC 22 (lymphocytes) | Protein 1.4 g/L | Glucose 2.1 (serum 6.2)
@@ -1743,12 +1560,10 @@ LP:
 {
     id:89, title:"Sepsis in Pregnancy — CAMTS & Maternal Critical Care", domain:"Special Infections", difficulty:"High",
     stem:`26F, 34 weeks gestation. G2P1. Three days fever, dysuria, loin pain. Found collapsed at home.
-
 MATERNITY UNIT → ICU TRANSFER:
 • GCS 12 | HR 144 | BP 72/38 (MAP 49) | RR 32 | Temp 40.1°C
 • SpO2 88% on 15L NRB | Fundal height consistent with 34 weeks | Fetal HR 182 bpm (tachycardia)
 • Rigors | Loin tenderness bilaterally | Urine: offensive, cloudy
-
 LABS:
 • WBC 24 | CRP 380 | PCT 28 | Lactate 5.8
 • Cr 1.8 (normal in pregnancy: upper limit 0.7) | Na 134 | K+ 3.1
@@ -1761,12 +1576,10 @@ LABS:
 {
     id:90, title:"Tetanus — Diagnosis, Autonomic Storm & ICU Management", domain:"Special Infections", difficulty:"High",
     stem:`45M, unvaccinated, from rural area. Penetrating foot injury 10 days ago — cleaned at home, not seen by doctor. Now presenting with jaw stiffness, difficulty swallowing, and back pain.
-
 ED ARRIVAL:
 • GCS 14 | HR 112 | BP 158/98 | RR 22 | Temp 37.8°C
 • Trismus (cannot open jaw >1 cm) | Sardonic smile (risus sardonicus)
 • Opisthotonos on stimulation | Generalised hyperreflexia | Intact consciousness
-
 No laboratory test confirms tetanus — clinical diagnosis.`,
     progressive_data:["Tetanus confirmed clinically. Human tetanus immunoglobulin (HTIG) 3000–6000 units IM given. Wound debridement performed. Metronidazole 400mg TDS started.","Day 2: severe generalised spasms — triggered by any stimulus. SpO2 falling during spasms to 82%. Intubation required.","Post-intubation Day 3: autonomic storm developing — HR fluctuating 48 to 188, BP 68/40 to 220/118 within minutes.","Day 10: spasms decreasing. Autonomic instability improving. Weaning from ventilator beginning."],
     key_probes:["Tetanus pathophysiology — what toxin, what is its mechanism, and why does it cause spasms?","Immediate management priorities — in order. What does HTIG do at this stage of illness?","Trismus + opisthotonos — you need to intubate. How and why is airway management specifically hazardous?","Autonomic storm in tetanus — mechanism and management. What agents do you use?","Tetanus is a clinical diagnosis — what conditions must you exclude before confirming it?"],
@@ -1776,7 +1589,6 @@ No laboratory test confirms tetanus — clinical diagnosis.`,
 {
     id:91, title:"Ventilator Weaning — Systematic Assessment & SBT Protocol", domain:"Weaning & Rehabilitation", difficulty:"Medium",
     stem:`58M, day 12 ICU following severe pneumonia with septic shock. Now haemodynamically stable, infection treated, FiO2 requirement reducing.
-
 CURRENT STATUS:
 • PSV 10 | PEEP 6 | FiO2 0.35 | RR 18 | VT 520 mL | P/F 218
 • MAP 78 on no vasopressors | HR 88 | GCS 15 | RASS -1
@@ -1791,14 +1603,12 @@ CURRENT STATUS:
 {
     id:92, title:"ICU-Acquired Weakness — Assessment, Prevention & Rehabilitation", domain:"Weaning & Rehabilitation", difficulty:"Medium",
     stem:`52F, severe COVID-19 ARDS — 28 days ICU. Received NMBA ×10 days, prone positioning ×8 sessions, high-dose corticosteroids. Now attempting to wean.
-
 CURRENT STATUS:
 • Tracheostomy in situ (Day 18)
 • Tolerating 4-hour T-piece trials but failing longer trials
 • MRC sum score: 26/60 (severe weakness)
 • CAM-ICU: positive (fluctuating)
 • Unable to lift arms against gravity | Cannot stand
-
 NERVE CONDUCTION STUDY (Day 25):
 • Reduced CMAP bilaterally | Normal conduction velocities | Normal SNAP
 • No denervation potentials on EMG`,
@@ -1810,12 +1620,10 @@ NERVE CONDUCTION STUDY (Day 25):
 {
     id:93, title:"Delirium in ICU — ABCDE Bundle & Prevention", domain:"Weaning & Rehabilitation", difficulty:"Medium",
     stem:`66M, post-emergency laparotomy (perforated sigmoid colon). Day 5 ICU. Sedation being lightened — propofol infusion reducing.
-
 NURSING CONCERN:
 • Patient pulling at lines and ETT | Climbing out of bed at 2am
 • Not recognising family | Responding to unseen stimuli
 • CAM-ICU: positive | RASS +2 (agitated)
-
 HISTORY: known alcohol dependence (2 bottles wine/day), hearing impairment, no prior cognitive impairment. Last drink: Day 0 of admission.`,
     progressive_data:["Risk factors identified: alcohol withdrawal, sensory deprivation, sleep fragmentation, immobility, constipation, pain inadequately managed.","Haloperidol 5mg IV given. Agitation partially controlled. Team asking about regular haloperidol prescription.","Alcohol withdrawal protocol started: CIWA-Ar scoring, IV lorazepam per protocol. Thiamine 500mg TDS IV.","Day 8: CAM-ICU negative. More oriented. Attempting extubation — passes SBT. Extubated successfully."],
     key_probes:["Delirium risk factors in this patient — list them and which are modifiable?","CAM-ICU — what four features does it assess and what constitutes a positive result?","Haloperidol for ICU delirium — what does the MIND-USA trial say?","Alcohol withdrawal in ICU — how do you assess severity and what is the specific treatment?","The ABCDE bundle — what are the components and what evidence supports it?"],
@@ -1825,7 +1633,6 @@ HISTORY: known alcohol dependence (2 bottles wine/day), hearing impairment, no p
 {
     id:94, title:"Chronic Critical Illness — Goals of Care & Futility", domain:"Weaning & Rehabilitation", difficulty:"High",
     stem:`74M, COPD Gold IV, previous stroke with residual dysphasia, T2DM. Admitted 6 weeks ago with severe pneumonia requiring intubation.
-
 CURRENT STATUS:
 • Tracheostomy (Day 18) | Tolerating 2-hour T-piece trials only after 6 weeks
 • MRC sum score: 18/60 (profound weakness)
@@ -1840,7 +1647,6 @@ CURRENT STATUS:
 {
     id:95, title:"Post-ICU Syndrome — Follow-Up & Long-Term Outcomes", domain:"Weaning & Rehabilitation", difficulty:"Medium",
     stem:`48F, previously healthy IT professional. Admitted 3 months ago with severe septic shock (biliary source) requiring 28 days ICU. Intubated for 22 days, tracheostomy, multiple organ support.
-
 FOLLOWED UP AT 3-MONTH POST-ICU CLINIC:
 • Physical: still unable to return to work. Fatigue on minimal exertion. Grip strength 60% predicted.
 • Cognitive: difficulties with concentration, memory, and multitasking. Struggling with complex work tasks.
@@ -1854,7 +1660,6 @@ FOLLOWED UP AT 3-MONTH POST-ICU CLINIC:
 {
     id:96, title:"Tracheostomy — Timing, Complications & Decannulation", domain:"Weaning & Rehabilitation", difficulty:"Medium",
     stem:`62M, GBS (Guillain-Barré syndrome) — intubated Day 4 of admission (FVC <15 mL/kg). Day 18 — autonomic instability settling but neuromuscular weakness persisting. Neurology predicts 6–12 weeks to recover sufficient respiratory function for extubation.
-
 CURRENT STATUS:
 • Still ventilated (PSV 10, PEEP 5, FiO2 0.30) | RR 18 | VT 480 mL
 • MRC sum score: 22/60 | Power: arms 1–2/5, legs 0/5
@@ -1868,13 +1673,11 @@ CURRENT STATUS:
 {
     id:97, title:"End-of-Life Care in ICU — Withdrawal of Life-Sustaining Treatment", domain:"Weaning & Rehabilitation", difficulty:"High",
     stem:`82F, advanced dementia (FAST Stage 7), resident in nursing home. Admitted with aspiration pneumonia, now requiring mechanical ventilation.
-
 BACKGROUND:
 • Advance directive: 'no resuscitation, no ICU admission' — documented 3 years ago with GP
 • Family: daughter (UK) says 'she would not have wanted this'. Son (overseas) saying 'do everything — it's not her time'.
 • Intubated in ED — advance directive not available at time of intubation
 • ICU Day 4: not improving. APACHE II 38. Fully ventilated. No response to pain. Bilateral fixed pupils (new).
-
 CT brain: massive bilateral ischaemic infarction.`,
     progressive_data:["Legal review: advance directive valid — properly witnessed, patient had capacity when signed, specific to this situation.","MDT meeting: consensus = continued ICU treatment is futile and contrary to patient's expressed wishes.","Son contacted by video call — remains opposed to WLST. Family meeting organised.","WLST performed. Patient died peacefully 4 hours later with daughter present."],
     key_probes:["Valid advance directive — what are the legal requirements and what is its status in clinical decision-making?","Son disagrees with WLST — legally, does he have the right to override the advance directive?","Futility in this case — how do you frame this for the family without using the word 'futile'?","WLST process — what are the steps and what is your role as the ICU consultant?","After WLST: what symptom management is mandatory and what monitoring do you continue?"],
@@ -1884,7 +1687,6 @@ CT brain: massive bilateral ischaemic infarction.`,
 {
     id:98, title:"Nutrition in ICU — When, What & How Much", domain:"Weaning & Rehabilitation", difficulty:"Medium",
     stem:`54M, severe acute pancreatitis (BISAP 4). Intubated Day 2. Day 5 — haemodynamics stable, on low-dose norad 0.08 mcg/kg/min. Has received only IV fluids so far.
-
 NUTRITIONAL STATUS:
 • Pre-admission: BMI 28, no significant weight loss
 • Current: nasogastric tube in situ | Bowel sounds present | Abdomen less tender
@@ -1898,11 +1700,9 @@ NUTRITIONAL STATUS:
 {
     id:99, title:"ICU Scoring Systems — APACHE, SOFA & Clinical Application", domain:"Weaning & Rehabilitation", difficulty:"Medium",
     stem:`You are presenting a complex case at your departmental ICU mortality review. Three patients are being discussed:
-
 PATIENT A: 78M, APACHE II 38, admitted with meningococcal septicaemia. Died on Day 3.
 PATIENT B: 45F, APACHE II 22, admitted with severe pancreatitis. Survived after 28 days.
 PATIENT C: 62M, SOFA score Day 1: 14, Day 3: 18 (rising). Septic shock, ARDS, AKI. Outcome unknown.
-
 QUESTION FROM MEDICAL DIRECTOR:
 "Our ICU standardised mortality ratio (SMR) is 1.4. What does this mean and should we be concerned?"`,
     progressive_data:["APACHE II predicted mortality for Patient A: 78%. Actual outcome: died. Was this a 'failure'?","SOFA score trajectory for Patient C: Day 1: 14, Day 3: 18. What does this rising SOFA tell you?","The MDRO (multi-drug resistant organism) rate in your ICU has risen over 6 months. How do you approach this?","A colleague asks you to explain 'Failure to Rescue' as a quality metric. How do you define it?"],
@@ -1913,11 +1713,8 @@ QUESTION FROM MEDICAL DIRECTOR:
 {
     id:100, title:"ICU Communication — Breaking Bad News & Family Meetings", domain:"Weaning & Rehabilitation", difficulty:"High",
     stem:`You are the ICU consultant. You have three family meetings scheduled today:
-
 FAMILY A: Parents of 19M post-cardiac arrest. Day 5. Neuroprognostication complete — bilateral absent N20, malignant EEG, NSE 180. Poor outcome certain.
-
 FAMILY B: Husband of 52F with severe ARDS Day 10. P/F improving slowly. She may survive but will likely have significant physical and cognitive impairment.
-
 FAMILY C: Son of 78M with CCI — tracheostomy, Day 42, no improvement. Son is a doctor and says 'I know you're giving up on him. Just try harder'.`,
     progressive_data:["Family A meeting: parents ask 'will he wake up?' — 17-year-old sibling also present.","Family B meeting: husband breaks down crying, says 'I just need her back'. Asks about experimental treatments.","Family C meeting: the son becomes increasingly aggressive and threatens to report you to GMC.","Post-meeting debrief: your team nurse is visibly distressed. She says 'I don't know if we did the right thing with Family A'."],
     key_probes:["Family A — how do you communicate certain poor prognosis in the presence of a minor? What language do you use?","Family B — how do you give honest uncertain prognosis without removing all hope?","Family C — how do you manage an aggressive family member who is also a healthcare professional?","What is the SPIKES protocol and how do you apply it in an ICU context?","After the meetings: what is your duty of care to your distressed nursing colleague?"],
@@ -1927,9 +1724,7 @@ FAMILY C: Son of 78M with CCI — tracheostomy, Day 42, no improvement. Son is a
 {
     id:101, title:"ICU Transport — Inter-Hospital Transfer of Unstable Patient", domain:"Transport, Organisation & Ethics", difficulty:"High",
     stem:`48M, severe ARDS (P/F 72) on VCV. Norad 0.28 mcg/kg/min. Prone positioning ongoing. No ECMO capability at your centre.
-
 TRANSFER REQUEST: Regional ECMO centre 110km away.
-
 CURRENT VENTILATOR: VT 6 mL/kg PBW | PEEP 14 | FiO2 0.85 | RR 18
 MAP 68 | HR 96 | Temp 37.4°C | Latest lactate 2.1`,
     progressive_data:["Pre-transfer checklist completed. O2 calculation: transport vent + time + safety factor = 3200L required. Available: 2 × 1360L cylinders = 2720L. Shortage identified.","Additional O2 cylinder sourced. Transfer team: ICU registrar + ICU nurse (neither ECMO trained). ECMO centre asks about team competency.","En route 45 min in: SpO2 drop 94%→86%. Transport vent high-pressure alarm. Patient biting tube — no bite block packed.","Arriving ECMO centre: patient stabilised mid-transfer with manual bagging. Handover performed."],
@@ -1940,7 +1735,6 @@ MAP 68 | HR 96 | Temp 37.4°C | Latest lactate 2.1`,
 {
     id:102, title:"Major Incident — ICU Surge Capacity & Triage", domain:"Transport, Organisation & Ethics", difficulty:"High",
     stem:`You are the on-call ICU consultant, Saturday night. At 23:00 you receive a call from the hospital commander: major road traffic collision — 12 casualties inbound, 4 expected to require ICU admission. Your ICU has 2 empty beds. HDU has 1 bed.
-
 CURRENT ICU PATIENTS:
 • 2 patients potentially suitable for step-down to ward (stable, weaning)
 • 1 patient on CRRT — cannot step down
@@ -1953,11 +1747,8 @@ CURRENT ICU PATIENTS:
 {
     id:103, title:"Clinical Governance — Incident Reporting & Learning", domain:"Transport, Organisation & Ethics", difficulty:"Medium",
     stem:`You are an ICU consultant. Three incidents have occurred this week:
-
 INCIDENT 1: A patient received 10× the prescribed noradrenaline dose due to a pump programming error. Caught by a nurse 20 minutes later. Patient had brief hypertensive episode — no lasting harm.
-
 INCIDENT 2: A patient developed bilateral pneumothoraces during bronchoscopy. Managed with chest drains — patient recovered.
-
 INCIDENT 3: A patient waiting in the ED for 6 hours before ICU bed became available. APACHE II 28. She deteriorated further during the wait.`,
     progressive_data:["Incident 1 reported on the incident reporting system. Pharmacy review requested.","Incident 2: the bronchoscopist did not report the incident. You discover it from the nursing notes.","Incident 3: a formal complaint has been received from the family.","End of week: you are asked to present the incidents at the departmental governance meeting."],
     key_probes:["Incident 1: near-miss reporting — why report near-misses and what system do you use?","Incident 2: the bronchoscopist did not report. What is your duty and how do you approach this colleague?","Incident 3: a formal complaint. What is the process and what is your duty to the family?","Root cause analysis — when is it indicated and how is it performed?","Just culture — define it and how does it differ from blame culture in managing clinical incidents?"],
@@ -1967,11 +1758,8 @@ INCIDENT 3: A patient waiting in the ED for 6 hours before ICU bed became availa
 {
     id:104, title:"Medicolegal Documentation — Consent, Capacity & the Mental Capacity Act", domain:"Transport, Organisation & Ethics", difficulty:"High",
     stem:`You have three patients requiring urgent decisions today:
-
 PATIENT 1: 44F, Jehovah's Witness, requiring emergency splenectomy for traumatic rupture. She is conscious, haemodynamically compromised, refusing blood transfusion. She signed an advance refusal of blood products 2 years ago.
-
 PATIENT 2: 72M, confusion and agitation following a fall. He was initially refusing CT head. Colleagues say 'he lacks capacity — just do the CT'.
-
 PATIENT 3: 28M, psychotic episode, requiring intubation for drug overdose. He is resisting and saying 'I don't want to be intubated'.`,
     progressive_data:["Patient 1: haemorrhage continuing. Surgeon says 'we may not be able to save her without blood'. You are asked to make a decision.","Patient 2: neuropsychiatry review — confusion is likely delirium from subdural haematoma. Is his refusal valid?","Patient 3: psychiatry says he had capacity at the time of the overdose (intentional self-harm). Does this change your decision?","All three patients survive. A medicolegal review is requested for Patient 1's care."],
     key_probes:["Patient 1: valid advance refusal of blood — does it override the clinical imperative to transfuse?","Capacity assessment — the four components of the Mental Capacity Act 2005.","Patient 2: he is refusing CT but may lack capacity. How do you assess capacity and what is the standard?","Patient 3: psychosis + intentional overdose + refusing intubation. How do you proceed?","Documentation of capacity and consent decisions — what specifically must you record?"],
@@ -1981,9 +1769,7 @@ PATIENT 3: 28M, psychotic episode, requiring intubation for drug overdose. He is
 {
     id:105, title:"Organ Donation — Maximising Donation & Ethical Framework", domain:"Transport, Organisation & Ethics", difficulty:"High",
     stem:`You have two potential donors on your ICU this week:
-
 DONOR 1: 34M, catastrophic TBI following assault. GCS 3, bilateral fixed dilated pupils, no brainstem reflexes. ICP uncontrollable (>40 mmHg). Family have been spoken to — they are unsure about donation.
-
 DONOR 2: 78F, massive intracerebral haemorrhage. Not fulfilling brain death criteria — GCS 4, some brainstem reflexes preserved. Decision to withdraw life-sustaining treatment made. Palliative care in progress.`,
     progressive_data:["Donor 1: specialist nurse for organ donation (SNOD) contacted. Family meeting arranged.","Donor 1: brain death testing completed. Two doctors confirm brain death. Family consent for donation obtained.","Donor 2: controlled donation after circulatory death (DCD) pathway initiated. Warm ischaemic time being managed.","Both donors: organ retrieval performed. 7 organs transplanted in total."],
     key_probes:["When do you refer to the specialist nurse for organ donation (SNOD) — what triggers the call?","Brain death testing — what are the preconditions and the specific tests performed?","Donor 1 family are unsure about donation — what is your role in the conversation?","DCD (donation after circulatory death) — what is the pathway and how does warm ischaemic time affect organ viability?","Donor management — five physiological targets for the multi-organ donor."],
@@ -1993,11 +1779,8 @@ DONOR 2: 78F, massive intracerebral haemorrhage. Not fulfilling brain death crit
 {
     id:106, title:"Leadership in ICU — Managing Conflict & Team Dynamics", domain:"Transport, Organisation & Ethics", difficulty:"Medium",
     stem:`You are the ICU consultant covering a 16-bed unit. Monday morning:
-
 SCENARIO 1: Your registrar approaches you — the night nurse in charge refused to comply with a sedation weeaning protocol, saying 'I know better than the protocol'. A patient's ICU stay has been unnecessarily prolonged.
-
 SCENARIO 2: A consultant from another specialty calls you aggressively — 'Your team intubated my patient without consulting me first. This is unacceptable.'
-
 SCENARIO 3: A junior doctor comes to you in tears. She made a prescribing error last night (caught before harm occurred). She says 'I'm not good enough for this job.'`,
     progressive_data:["Scenario 1: the nurse has 25 years of experience and strong views. Two other nurses agree with her position.","Scenario 2: the patient was in respiratory failure — intubation was time-critical. The other consultant's note says 'do not intubate without my approval'.","Scenario 3: on review, the error was partly due to an unclear prescription chart — a systemic issue, not solely her fault.","End of week: you are told by your clinical director that your unit has a 'communication problem'."],
     key_probes:["Scenario 1: experienced nurse non-compliant with protocol — how do you manage this professionally?","Scenario 2: interdepartmental conflict over a clinical decision — how do you handle the aggressive consultant?","Scenario 3: a distressed junior doctor after a near-miss — what is your immediate duty and longer-term role?","How do you create a psychological safety culture in ICU?","Your clinical director says there is a 'communication problem' — how do you diagnose and address this?"],
@@ -2007,11 +1790,8 @@ SCENARIO 3: A junior doctor comes to you in tears. She made a prescribing error 
 {
     id:107, title:"Research & Evidence in ICU — Trial Interpretation", domain:"Transport, Organisation & Ethics", difficulty:"Medium",
     stem:`You are reviewing three landmark ICU trials to present at your journal club:
-
 TRIAL 1: PROWESS trial (2001) — activated protein C (drotrecogin alfa) in severe sepsis. Positive result — introduced into clinical practice globally.
-
 TRIAL 2: ARISE, ProCESS, ProMISe (2014–2015) — Early Goal-Directed Therapy vs standard care in septic shock. No mortality benefit.
-
 TRIAL 3: RECOVERY trial (2020) — dexamethasone in COVID-19. 28-day mortality benefit in ventilated patients.`,
     progressive_data:["PROWESS: subsequently, PROWESS-SHOCK (2012) enrolled sicker patients — no benefit. Drug withdrawn from market. What went wrong?","ARISE/ProCESS/ProMISe: EGDT was standard of care for 15 years. Three large RCTs show no benefit. How do you appraise this?","RECOVERY: interim analysis showed benefit — trial stopped early. What are the risks of stopping an RCT early?","Journal club question: 'Should we use this new drug/protocol based on this single trial?'"],
     key_probes:["Why did PROWESS give a false positive result — what are the specific methodological flaws?","ARISE/ProCESS/ProMISe found no benefit from EGDT — does this mean Rivers' original trial was fraudulent?","What is the risk of stopping an RCT early for benefit?","How do you appraise an ICU trial for applicability to your patient population?","What is the hierarchy of evidence and when is a single RCT sufficient to change practice?"],
@@ -2021,11 +1801,8 @@ TRIAL 3: RECOVERY trial (2020) — dexamethasone in COVID-19. 28-day mortality b
 {
     id:108, title:"Prescribing Safety in ICU — Drug Errors & High-Risk Medications", domain:"Transport, Organisation & Ethics", difficulty:"Medium",
     stem:`You are reviewing prescribing safety on your ICU ward round. Three situations require your attention:
-
 SITUATION 1: A patient is prescribed 'morphine 10mg IV PRN pain'. The nurse asks how often it can be given and whether there is a maximum dose. The prescription has no frequency or maximum stated.
-
 SITUATION 2: A patient on heparin infusion has a Plt count that has fallen from 220 to 68 over 5 days. The team say 'it's probably just the illness'.
-
 SITUATION 3: A patient is prescribed vancomycin. The pharmacy technician calls to say the dose seems high — they have calculated it based on total body weight but the patient is obese (BMI 44).`,
     progressive_data:["Situation 1: the nurse gives 10mg IV morphine. 30 minutes later the patient is unrousable, RR 6.","Situation 2: you calculate the 4T score — it is 6. HIT suspected.","Situation 3: vancomycin level (trough) comes back as 28 mg/L (target 15–20 mg/L). Cr rising.","All three situations are reported as incidents at the end of the week."],
     key_probes:["Incomplete opioid prescriptions — what are the minimum required elements of a safe prescription?","4T score of 6 in a patient on heparin — what are the four components and what do you do immediately?","Vancomycin dosing in obesity — what is the correct approach and what monitoring is mandatory?","High-alert medications in ICU — list five and what specific safeguards apply to each?","Root cause of Situation 1 — was this a nurse error, a prescribing error, or a system error?"],
@@ -2035,11 +1812,8 @@ SITUATION 3: A patient is prescribed vancomycin. The pharmacy technician calls t
 {
     id:109, title:"Teaching & Training in ICU — Supervision & Simulation", domain:"Transport, Organisation & Ethics", difficulty:"Medium",
     stem:`You are the educational supervisor for three ICU trainees:
-
 TRAINEE A: FY2 doctor, week 2 of ICU rotation. Technically competent but avoids discussing prognosis with families — 'I don't know what to say'.
-
 TRAINEE B: Core medical trainee, month 4. Excellent with procedures but tends to escalate all decisions to consultants immediately without attempting clinical reasoning first.
-
 TRAINEE C: ICU registrar, year 2 of fellowship. Independently competent clinically but gives feedback to junior staff in a way that has caused two nurses to complain.`,
     progressive_data:["Trainee A: you observe her attempting to answer a family's questions about prognosis. She freezes and leaves the room.","Trainee B: called to review a patient deteriorating — comes to you immediately without examining the patient first.","Trainee C: you observe him telling a nurse 'that was a really stupid mistake' after a minor medication error.","Monthly teaching session: you are asked to design a simulation scenario for the whole team."],
     key_probes:["Trainee A — how do you teach communication skills and specifically prognosis discussion?","Trainee B — how do you develop independent clinical reasoning without undermining their confidence?","Trainee C — how do you give feedback about their feedback style? What is the specific impact of their behaviour?","Simulation in ICU — what makes a high-quality simulation scenario and what are the learning objectives?","As an educational supervisor — what are your responsibilities if a trainee is struggling significantly?"],
@@ -2049,12 +1823,10 @@ TRAINEE C: ICU registrar, year 2 of fellowship. Independently competent clinical
 {
     id:110, title:"Infection Prevention & Control in ICU — VAP, CLABSI & MDROs", domain:"Transport, Organisation & Ethics", difficulty:"Medium",
     stem:`You are reviewing your ICU's infection prevention data for the last quarter:
-
 • VAP rate: 8.2 per 1000 ventilator days (national benchmark: <5)
 • CLABSI rate: 2.1 per 1000 catheter days (national benchmark: <1)
 • MRSA acquisition rate: 0.8 per 1000 patient days (rising over 3 months)
 • C. difficile rate: 3 cases in the quarter (all in patients on broad-spectrum antibiotics >7 days)
-
 The ICU manager asks you to present an improvement plan at the next governance meeting.`,
     progressive_data:["VAP bundle audit: oral care performed in 62% of patients. HOB elevation documented in 88%. Daily SBT in 74%. Subglottic secretion drainage device used in 40%.","CLABSI review: 3 of 5 infections in patients with femoral central lines inserted during emergencies.","MRSA screening: not performed on admission for 35% of admissions in the last month.","Antimicrobial stewardship: average antibiotic duration on the unit is 9.2 days."],
     key_probes:["VAP bundle — what are the components and which has the strongest evidence?","CLABSI prevention — what are the insertion bundle components and the maintenance bundle components?","MRSA screening on ICU admission — what is the evidence and what does a positive screen mandate?","Antimicrobial stewardship in ICU — what specific interventions reduce C. difficile and MDRO rates?","You are presenting this data to the governance committee — how do you frame it without attributing blame?"],
@@ -2064,11 +1836,9 @@ The ICU manager asks you to present an improvement plan at the next governance m
 {
     id:111, title:"ECMO — VV-ECMO Initiation, Management & Weaning", domain:"High-Yield Bonus Cases", difficulty:"High",
     stem:`31M, previously healthy. Severe H1N1 influenza ARDS. Day 6 ICU. Optimised ventilation including proning ×4 sessions.
-
 CURRENT:
 • P/F ratio 54 on PEEP 18, FiO2 1.0 | pH 7.28 | PaCO2 58
 • Driving pressure 22 cmH2O | MAP 72 on norad 0.15
-
 ECMO CENTRE CALL: They ask you three specific questions before accepting the patient for VV-ECMO.`,
     progressive_data:["VV-ECMO initiated. Right IJV dual-lumen Avalon cannula 31Fr. Flow 4.8 L/min. Lung rest ventilation: VT 3 mL/kg, PEEP 10, RR 10, FiO2 0.4.","Day 3 on ECMO: recirculation suspected. SpO2 on left hand 88% despite sweep gas FiO2 1.0. Right hand SpO2 99%.","Day 8 on ECMO: native lung improving. P/F on ECMO 280. Team starting weaning trial.","Day 12: ECMO weaning complete. Decannulated. Extubated Day 15. Discharged Day 28."],
     key_probes:["ECMO centre asks: what is the P/F ratio, how long has it been at this level, and have you proned? Why these three questions?","VV-ECMO indications — the P/F and time thresholds from EOLIA trial criteria.","Recirculation on VV-ECMO — mechanism, how you diagnose it, and what you do.","Lung rest ventilation on VV-ECMO — what parameters and why?","VV-ECMO weaning — what parameters guide the weaning trial and how do you perform it?"],
@@ -2078,11 +1848,8 @@ ECMO CENTRE CALL: They ask you three specific questions before accepting the pat
 {
     id:112, title:"Haemodynamic Monitoring — Choosing & Interpreting the Right Tool", domain:"High-Yield Bonus Cases", difficulty:"High",
     stem:`You are the EDIC Part 2 viva examiner's favourite topic. Three patients, three monitoring dilemmas:
-
 PATIENT A: 58M, septic shock, norad 0.4 mcg/kg/min, MAP 65. Lactate 4.2 and rising. CVP 12. Team arguing about whether to give more fluid.
-
 PATIENT B: 44F, post-cardiac surgery, CO 2.1 L/min on PA catheter, CVP 18, PCWP 22, SVR 2400.
-
 PATIENT C: 68M, ARDS + cor pulmonale. Right heart failure suspected. Team uncertain whether to add vasopressin or increase PEEP.`,
     progressive_data:["Patient A: passive leg raise performed. Pulse pressure variation 18% in sinus rhythm.","Patient B: PA catheter data: CI 1.4, SVRI 2800, PCWP 22, SvO2 48%. Dobutamine started.","Patient C: bedside echo: TAPSE 9 mm, D-sign, estimated RVSP 62 mmHg. E-point septal separation 18 mm.","All three patients: team asking 'which monitoring tool is best for ICU patients?'"],
     key_probes:["Patient A: CVP 12 — does this tell you if the patient is fluid responsive? What does and what doesn't?","Passive leg raise test — mechanism, how to perform it correctly, and what constitutes a positive result.","Patient B: PA catheter data interpretation. CI 1.4, PCWP 22, SvO2 48% — what is the haemodynamic state and what do you do?","Patient C: echo findings — TAPSE 9, D-sign, RVSP 62. What do these tell you and how does this change your management?","What is the ideal haemodynamic monitoring tool for the critically ill — is there one?"],
@@ -2092,11 +1859,8 @@ PATIENT C: 68M, ARDS + cor pulmonale. Right heart failure suspected. Team uncert
 {
     id:113, title:"Ventilator Graphics — Waveform Interpretation at the Bedside", domain:"High-Yield Bonus Cases", difficulty:"High",
     stem:`You are teaching a registrar how to interpret ventilator waveforms. You show her three waveforms on your ICU ventilator screen:
-
 WAVEFORM 1: Pressure-time curve — the peak pressure is 42 cmH2O. The pressure remains at 28 cmH2O during the inspiratory pause. The patient is on VCV mode.
-
 WAVEFORM 2: Flow-time curve — the expiratory flow does not return to zero before the next breath begins. The patient is a COPD patient on mandatory ventilation.
-
 WAVEFORM 3: Pressure-time curve in PSV mode — there are irregular, large-amplitude pressure swings coinciding with ventilator breaths. The patient has ARDS with high respiratory drive.`,
     progressive_data:["Waveform 1: you reduce VT by 50 mL. The plateau pressure falls to 26 cmH2O. Peak pressure falls to 38 cmH2O.","Waveform 2: you perform an expiratory hold. The pressure reads 8 cmH2O above PEEP. RR is reduced to 10, I:E changed to 1:4.","Waveform 3: NMBA administered. The irregular pressure swings disappear. DP falls from 22 to 14 cmH2O.","Teaching point: the registrar asks 'what is the stress index and when do you use it?'"],
     key_probes:["Waveform 1: peak pressure 42, plateau 28. Calculate resistance and compliance. What does each tell you?","Driving pressure — calculate it from these values. What is the clinical significance of DP >15 cmH2O?","Waveform 2: flow not returning to zero. What is this and what is the expiratory hold showing?","Waveform 3: irregular pressure swings in PSV — what is happening and why does NMBA fix it?","Stress index — what is it and what do concave vs convex pressure-time curves in VCV tell you about PEEP adequacy?"],
@@ -2106,13 +1870,11 @@ WAVEFORM 3: Pressure-time curve in PSV mode — there are irregular, large-ampli
 {
     id:114, title:"Refractory Hypoxaemia — Systematic Approach Beyond Standard ARDS Care", domain:"High-Yield Bonus Cases", difficulty:"High",
     stem:`44F, severe ARDS from bilateral pneumonia. Day 8 ICU. Despite optimised standard care, P/F ratio remains 68.
-
 CURRENT TREATMENT:
 • VCV: VT 6 mL/kg, PEEP 16, FiO2 1.0 | DP 18 cmH2O
 • Proning ×5 sessions (16h each) — last prone session P/F improved to 88 then fell to 68 supine
 • NMBA cisatracurium — Day 3
 • Norad 0.18 mcg/kg/min | MAP 72
-
 ECHO: RV mildly dilated, TAPSE 14, D-sign on short-axis, no pericardial effusion`,
     progressive_data:["ECMO referral made. Centre accepts — transfer in 4 hours. Pre-transfer optimisation required.","Pre-transfer: high-frequency oscillatory ventilation (HFOV) considered by registrar as a 'bridge'. You disagree.","Pre-transfer: iNO 20 ppm trialled. P/F 68→82. SpO2 88→93%. Decision made to add iNO for transfer.","On VV-ECMO at receiving centre: P/F improves to >200 within 24h. Lung rest ventilation commenced."],
     key_probes:["Systematic approach to refractory hypoxaemia — what interventions have you exhausted and what remains?","Echo shows RV dilation with D-sign — how does this change your approach to PEEP in this patient?","HFOV in 2024 — what did OSCAR and OSCILLATE trials show and is there any remaining role?","iNO in ARDS — mechanism, evidence, and why is it a bridge not a treatment?","Pre-transfer optimisation for VV-ECMO — what specific steps in the last 4 hours?"],
@@ -2122,14 +1884,12 @@ ECHO: RV mildly dilated, TAPSE 14, D-sign on short-axis, no pericardial effusion
 {
     id:115, title:"Integrated Case — Multi-Organ Failure & Prognosis", domain:"High-Yield Bonus Cases", difficulty:"High",
     stem:`62M, no significant past medical history. Admitted 10 days ago with community-acquired pneumonia. Rapid deterioration: now has 4-organ failure.
-
 CURRENT STATUS (Day 10):
 • RESPIRATORY: P/F 88 on PEEP 14, FiO2 0.80. Proned twice.
 • CARDIOVASCULAR: MAP 62 on norad 0.42 + vasopressin 0.03. Echo: LVEF 28%, new global hypokinesis.
 • RENAL: anuric. CRRT dependent (CVVHDF 30 mL/kg/h).
 • HEPATIC: Bili 188, INR 3.2, ALT 680.
 • NEUROLOGICAL: GCS 8. CT: no structural cause. Metabolic encephalopathy.
-
 SOFA score Day 10: 18`,
     progressive_data:["Day 12: SOFA rising to 20. New line of treatment suggested by registrar: IV immunoglobulin for 'possible cytokine storm'.","Family meeting Day 12: wife and two adult children. They ask 'is he going to make it?'","Day 14: SOFA 22. New vasopressor (adrenaline) added. Team morale low. Junior doctor asks 'are we doing the right thing?'","Day 16: MDT and palliative care involved. Goals of care discussion with family concludes with WLST agreed."],
     key_probes:["SOFA score 18 rising to 20 — what does this trajectory tell you about prognosis?","4-organ failure on Day 10 — what is the evidence-based mortality prediction?","The registrar suggests IVIg for 'cytokine storm' — how do you evaluate this suggestion?","Family meeting: wife asks 'is he going to make it?' — what do you say and how?","Junior doctor asks 'are we doing the right thing?' — how do you respond and what does this question tell you about the team?"],
@@ -2139,7 +1899,6 @@ SOFA score Day 10: 18`,
 {
     id:116, title:"Post-Cardiac Surgery — Complex Haemodynamics & Mechanical Circulatory Support", domain:"High-Yield Bonus Cases", difficulty:"High",
     stem:`68M, severe ischaemic cardiomyopathy (LVEF 15%), severe MR, severe TR. High-risk quadruple-vessel CABG + MV repair + TV repair. On bypass 3h 42min.
-
 POST-OP HOUR 4:
 • MAP 48 on norad 0.5 + dobutamine 10 + vasopressin 0.04 | HR 112 (AF)
 • CO 1.6 L/min | SVR 2600 | PCWP 26 | CVP 22 | SvO2 38%
@@ -2152,11 +1911,9 @@ POST-OP HOUR 4:
 {
     id:117, title:"Rare but High-Stakes — TTP, HUS & Thrombotic Microangiopathy", domain:"High-Yield Bonus Cases", difficulty:"High",
     stem:`32F, previously healthy. Five days of fatigue, headache, and confusion. One day of oliguria.
-
 ED ARRIVAL:
 • GCS 13 | HR 118 | BP 178/108 | RR 22 | Temp 37.4°C
 • Jaundice ++ | Petechiae on arms and legs
-
 LABS:
 • Hb 6.8 | Plt 18 ×10⁹/L | WBC 9.2 (normal)
 • Peripheral blood film: numerous schistocytes (fragmented red cells)
@@ -2171,11 +1928,9 @@ LABS:
 {
     id:118, title:"Aortic Dissection — Type A & Type B ICU Management", domain:"High-Yield Bonus Cases", difficulty:"High",
     stem:`56M, hypertension. Sudden onset tearing chest pain radiating to the back. 6/10 persistent.
-
 ED ARRIVAL:
 • HR 108 | BP right arm 188/112 | BP left arm 142/88 (BP differential 46 mmHg) | RR 22 | Temp 37.1°C
 • GCS 15 | New aortic regurgitation murmur
-
 CT AORTOGRAM:
 • Type A aortic dissection: intimal flap from aortic root to descending aorta
 • No pericardial effusion | Coronary ostia not involved | No visceral malperfusion`,
@@ -2187,13 +1942,11 @@ CT AORTOGRAM:
 {
     id:119, title:"Haematological Emergencies — Hyperviscosity & Blast Crisis", domain:"High-Yield Bonus Cases", difficulty:"High",
     stem:`68M, known IgM paraproteinaemia (Waldenström's macroglobulinaemia), not yet on treatment. Brought in acutely confused.
-
 ED ARRIVAL:
 • GCS 11 | HR 88 | BP 152/88 | Temp 37.2°C | RR 18 | SpO2 94% on 3L
 • Visual disturbance — blurred vision | Epistaxis | Gum bleeding
 • Fundoscopy: dilated tortuous retinal veins, flame haemorrhages
 • Retinal haemorrhage bilateral
-
 LABS:
 • Hb 8.2 | WBC 9.2 | Plt 88 | Serum protein 118 g/L (albumin 32 g/L)
 • IgM 84 g/L | Serum viscosity 8.2 cP (normal <1.8 cP)
@@ -2206,7 +1959,6 @@ LABS:
 {
     id:120, title:"The EDIC Exam — High-Yield Rapid Review", domain:"High-Yield Bonus Cases", difficulty:"High",
     stem:`This is your final session before the EDIC Part 2 exam. The examiner will ask rapid-fire questions across all domains. There is no single patient — this is an integration and synthesis session.
-
 KEY KNOWLEDGE AREAS TO CONSOLIDATE:
 • Guidelines: SSC 2021, BTF 4th Ed, ERC/ESICM 2021, ESICM ARDS 2023, ESC IE 2015
 • Trial knowledge: PROWESS-SHOCK, ARISE/ProCESS/ProMISe, RECOVERY, EOLIA, NICE-SUGAR, ADRENAL, STARRT-AKI, CRASH-2, CRASH-3, ATN, RENAL, FATE, PROPPR, AQUAMAT
@@ -2219,68 +1971,59 @@ KEY KNOWLEDGE AREAS TO CONSOLIDATE:
   }
 ];
 
-const EXAMINER_SYSTEM = (c) => `You are a senior EDIC Part 2 CCS examiner. You are conducting a structured 25-minute clinical viva on a real ICU case.
 
-CASE: ${c.title} | ${c.domain}
-STEM: ${c.stem}
+// ─── SM-2 SPACED REPETITION ────────────────────────────────────────────────
+function sm2Update(quality, data = {}) {
+  const { repetitions = 0, interval = 1, easeFactor = 2.5 } = data;
+  const q = quality === 'green' ? 5 : quality === 'amber' ? 3 : 1;
+  let newEF = Math.max(1.3, easeFactor + 0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
+  if (q < 3) return { repetitions: 0, interval: 1, easeFactor: newEF, lastReviewed: Date.now() };
+  const newReps = repetitions + 1;
+  const newInterval = newReps === 1 ? 1 : newReps === 2 ? 6 : Math.round(interval * newEF);
+  return { repetitions: newReps, interval: newInterval, easeFactor: newEF, lastReviewed: Date.now() };
+}
+function isDue(srRec) {
+  if (!srRec || !srRec.lastReviewed) return false;
+  return (Date.now() - srRec.lastReviewed) / 86400000 >= (srRec.interval || 1);
+}
 
-PROGRESSIVE DATA — release only when the candidate's management logically triggers it:
-${c.progressive_data.map((d,i)=>`[${i+1}] ${d}`).join('\n')}
+// ─── RADAR CHART ──────────────────────────────────────────────────────────
+function RadarChart({ domainStats }) {
+  const entries = Object.entries(domainStats).filter(([, s]) => s.attempted > 0);
+  if (entries.length < 3) return (
+    <div style={{ textAlign: 'center', color: C.muted, fontSize: 12, padding: '20px 0' }}>
+      Attempt cases in 3+ domains to unlock radar chart
+    </div>
+  );
+  const size = 220, cx = size / 2, cy = size / 2, r = size * 0.36;
+  const n = entries.length;
+  const ang = (i) => (i / n) * 2 * Math.PI - Math.PI / 2;
+  const pts = entries.map(([, s], i) => {
+    const pct = s.attempted ? (s.green / s.attempted) : 0;
+    return { x: cx + r * pct * Math.cos(ang(i)), y: cy + r * pct * Math.sin(ang(i)), pct };
+  });
+  const grid = (f) => entries.map((_, i) => `${cx + r * f * Math.cos(ang(i))},${cy + r * f * Math.sin(ang(i))}`).join(' ');
+  const poly = pts.map(p => `${p.x},${p.y}`).join(' ');
+  return (
+    <svg width={size} height={size} style={{ display: 'block', margin: '0 auto' }}>
+      {[0.25, 0.5, 0.75, 1].map(f => (
+        <polygon key={f} points={grid(f)} fill="none" stroke="#1E3A5F" strokeWidth={1} />
+      ))}
+      {entries.map((_, i) => (
+        <line key={i} x1={cx} y1={cy} x2={cx + r * Math.cos(ang(i))} y2={cy + r * Math.sin(ang(i))} stroke="#1E3A5F" strokeWidth={1} />
+      ))}
+      <polygon points={poly} fill={`${C.teal}30`} stroke={C.teal} strokeWidth={1.5} />
+      {entries.map(([domain], i) => {
+        const lx = cx + (r + 20) * Math.cos(ang(i));
+        const ly = cy + (r + 20) * Math.sin(ang(i));
+        const short = domain.split(' ')[0].slice(0, 7);
+        return <text key={i} x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize={7} fill={C.muted} fontFamily="monospace">{short}</text>;
+      })}
+    </svg>
+  );
+}
 
-KEY CLINICAL AREAS for this case (work through these in order — do not skip ahead):
-${c.key_probes.map((p,i)=>`${i+1}. ${p}`).join('\n')}
-
-2024–2026 UPDATES (use only when directly relevant to this case):
-TIGRIS (Lancet 2026): PMX hemoadsorption for endotoxic septic shock, EAA 0.60–0.90, NNT 9.7 at 28d. Not USA-approved yet.
-SSC 2024 update: HFNO preferred over NIV for sepsis-induced hypoxaemic respiratory failure. Core bundle unchanged.
-Refractory septic shock: methylene blue 1–2 mg/kg (iNOS inhibitor). CRRT does not reverse vasoplegia.
-
-YOUR BEHAVIOUR AS EXAMINER:
-
-STAY ON TOPIC. You are working through the key clinical areas in order. Do not jump to a new topic until the current one is adequately answered. Do not ask about mechanisms of drugs unless the drug choice itself is the clinical question.
-
-WHEN THE CANDIDATE ANSWERS WELL: Move to the next key clinical area. Say what data point is now available and what the next problem is.
-
-WHEN THE ANSWER IS INCOMPLETE: Ask one focused follow-up on the same topic. Do not move on until the core point is addressed.
-
-WHEN THE ANSWER IS VAGUE: Ask for one specific thing — a number, a drug, a threshold. Stay on the same topic.
-
-WHEN THE CANDIDATE GIVES WRONG INFORMATION: Do not confirm it. Ask "Are you certain about that?" or "What does the guideline say?" Stay on the same topic.
-
-WHEN THE CANDIDATE CORRECTLY CHALLENGES YOU: Say "You are right." then move to the next clinical area immediately.
-
-EVIDENCE RULE: Only probe on things supported by SSC, ESICM, ERC, BTF, KDIGO or major trials. If you are not certain the evidence supports a challenge, do not raise it.
-
-FORMAT:
-- 1–2 sentences only. Never more.
-- No bullet points. No lists. No encouragement.
-- No preamble. Start with the question or challenge directly.
-- Speak like an examiner who has done this 500 times.`;
-
-const buildMessages = (msgs) => {
-  const out = [];
-  for (const m of msgs) {
-    out.push({ role: m.role==='examiner'?'assistant':'user', content: m.content });
-  }
-  if (out.length && out[0].role === 'assistant') {
-    out.unshift({ role: 'user', content: 'Begin.' });
-  }
-  return out;
-};
-
-const RAG_OPTIONS = [
-  { val:'green', label:'✓ Confident', color:'#4CAF50' },
-  { val:'amber', label:'⚠ Review',    color:'#FFD54F' },
-  { val:'red',   label:'✗ Weak',      color:'#FF5252' },
-];
-
-// ─── STORAGE HELPER — fire and forget, never blocks UI ──────────────────────
-const persist = (data) => {
-  try { localStorage.setItem('edic_master', JSON.stringify(data)); } catch {}
-};
-
-// ─── ANALYTICS PANEL ─────────────────────────────────────────────────────────
-// EDIC Part 2 CoBaTrICE blueprint weights (CCS stations)
+// ─── ANALYTICS PANEL ─────────────────────────────────────────────────────
 const BLUEPRINT = {
   'Sepsis & Circulatory Shock': 20,
   'Respiratory Failure & ARDS': 15,
@@ -2295,233 +2038,360 @@ const BLUEPRINT = {
   'Transport, Organisation & Ethics': 10,
   'High-Yield Bonus Cases': 15,
 };
-
-function AnalyticsPanel({ getAttempts, rag, cases, C }) {
+function AnalyticsPanel({ rag, srData, apiKey }) {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
-
-  const attempts = getAttempts();
-  const ragVals = Object.entries(rag);
-
-  // Domain breakdown
-  const domainStats = {};
-  cases.forEach(c => {
-    const r = rag[String(c.id)];
-    if (!domainStats[c.domain]) domainStats[c.domain] = { total:0, green:0, amber:0, red:0, attempted:0 };
-    domainStats[c.domain].total++;
-    if (r) { domainStats[c.domain].attempted++; domainStats[c.domain][r]++; }
-  });
-
-  const weakDomains = Object.entries(domainStats)
-    .filter(([,s]) => s.attempted > 0)
-    .sort(([,a],[,b]) => (b.red+b.amber) - (a.red+a.amber))
-    .slice(0, 5);
-
+  const domainStats = useMemo(() => {
+    const s = {};
+    CASES.forEach(c => {
+      if (!s[c.domain]) s[c.domain] = { total: 0, green: 0, amber: 0, red: 0, attempted: 0 };
+      s[c.domain].total++;
+      const r = rag[String(c.id)];
+      if (r) { s[c.domain].attempted++; s[c.domain][r]++; }
+    });
+    return s;
+  }, [rag]);
   const totalAttempted = Object.keys(rag).length;
-  const totalGreen = Object.values(rag).filter(v=>v==='green').length;
-  const totalRed = Object.values(rag).filter(v=>v==='red').length;
-  const totalAmber = Object.values(rag).filter(v=>v==='amber').length;
+  const totalGreen  = Object.values(rag).filter(v => v === 'green').length;
+  const totalAmber  = Object.values(rag).filter(v => v === 'amber').length;
+  const totalRed    = Object.values(rag).filter(v => v === 'red').length;
+  const dueCount    = CASES.filter(c => isDue(srData[String(c.id)])).length;
 
   const generateSummary = async () => {
+    if (!apiKey) { setSummary('Enter your Anthropic API key in the header to generate a study plan.'); return; }
     if (totalAttempted === 0) return;
-    setLoading(true);
-    setSummary(null);
+    setLoading(true); setSummary(null);
     try {
-      const weakCases = cases.filter(c => rag[String(c.id)] === 'red' || rag[String(c.id)] === 'amber')
-        .map(c => `${c.title} (${c.domain}) — rated ${rag[String(c.id)]}`)
-        .slice(0, 20).join('\n');
-      const strongCases = cases.filter(c => rag[String(c.id)] === 'green')
-        .map(c => c.title).slice(0, 10).join(', ');
-
+      const weakCases = CASES.filter(c => rag[String(c.id)] === 'red' || rag[String(c.id)] === 'amber')
+        .map(c => `${c.title} (${c.domain}) — ${rag[String(c.id)]}`).slice(0, 20).join('\n');
+      const strongCases = CASES.filter(c => rag[String(c.id)] === 'green').map(c => c.title).slice(0, 10).join(', ');
       const prompt = `You are an EDIC Part 2 exam coach. Based on this candidate's viva practice data, give a focused study plan.
-
 WEAK/REVIEW CASES (${totalRed + totalAmber} cases):
 ${weakCases}
-
 CONFIDENT CASES (${totalGreen} cases): ${strongCases}
-
 Total attempted: ${totalAttempted}/120
-
-Write a concise study plan with:
-1. TOP 3 WEAK DOMAINS — name each and the specific gap to address
-2. KEY TOPICS TO REVISE — 5-7 bullet points of the most high-yield topics from weak cases
-3. EXAM STRATEGY — 2-3 sentences on how to approach the viva given this profile
-4. NEXT CASES — name 3-5 specific cases to attempt next
-
+Write a concise study plan:
+1. TOP 3 WEAK DOMAINS — name each and the specific gap
+2. KEY TOPICS TO REVISE — 5-7 bullet points of the most high-yield topics
+3. EXAM STRATEGY — 2-3 sentences given this profile
+4. NEXT CASES — 3-5 specific cases to attempt next
 Be direct and specific. Max 300 words.`;
-
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 600,
-          messages: [{ role: 'user', content: prompt }]
-        })
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
       });
       const data = await res.json();
       setSummary(data.content?.[0]?.text || 'Unable to generate summary.');
-    } catch(e) {
-      setSummary('Error generating summary. Check your API key.');
-    }
+    } catch(e) { setSummary('Error: ' + e.message); }
     setLoading(false);
   };
-
   return (
     <div>
+      {/* SM-2 Due Badge */}
+      {dueCount > 0 && (
+        <div style={{ background: `${C.gold}18`, border: `1px solid ${C.gold}50`, borderRadius: 9, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 18 }}>🔔</span>
+          <div>
+            <div style={{ fontWeight: 'bold', color: C.gold, fontSize: 13 }}>{dueCount} cases due for review today</div>
+            <div style={{ fontSize: 11, color: C.muted }}>Based on spaced repetition schedule — switch to Flashcard tab to review them</div>
+          </div>
+        </div>
+      )}
       {/* Score overview */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:16 }}>
-        <div style={{ fontSize:11, color:C.muted, marginBottom:8 }}>
-        {totalAttempted} cases attempted · {totalGreen+totalAmber+totalRed} rated (use ✓ / ⚠ / ✗ after each case)
-      </div>
-      {[
-          { l:'Weak', v:totalRed, c:C.coral },
-          { l:'Review', v:totalAmber, c:C.gold },
-          { l:'Confident', v:totalGreen, c:'#4CAF50' },
-        ].map(({l,v,c}) => (
-          <div key={l} style={{ background:C.card, borderRadius:10, padding:'12px 10px', textAlign:'center', border:`1px solid ${c}40` }}>
-            <div style={{ fontSize:26, fontWeight:'bold', color:c }}>{v}</div>
-            <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{l}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 14 }}>
+        {[{ l: 'Weak', v: totalRed, c: C.coral }, { l: 'Review', v: totalAmber, c: C.gold }, { l: 'Confident', v: totalGreen, c: C.green }].map(({ l, v, c }) => (
+          <div key={l} style={{ background: C.card, borderRadius: 9, padding: '12px 10px', textAlign: 'center', border: `1px solid ${c}40` }}>
+            <div style={{ fontSize: 26, fontWeight: 'bold', color: c }}>{v}</div>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{l}</div>
           </div>
         ))}
       </div>
-
+      {/* Radar chart */}
+      <div style={{ background: C.card, borderRadius: 10, padding: 14, marginBottom: 14 }}>
+        <div style={{ fontWeight: 'bold', color: C.teal, fontSize: 13, marginBottom: 10 }}>DOMAIN RADAR</div>
+        <RadarChart domainStats={domainStats} />
+      </div>
       {/* Domain breakdown */}
-      <div style={{ background:C.card, borderRadius:10, padding:14, marginBottom:14 }}>
-        <div style={{ fontWeight:'bold', color:C.teal, fontSize:13, marginBottom:10 }}>DOMAIN PERFORMANCE</div>
+      <div style={{ background: C.card, borderRadius: 10, padding: 14, marginBottom: 14 }}>
+        <div style={{ fontWeight: 'bold', color: C.teal, fontSize: 13, marginBottom: 10 }}>DOMAIN BREAKDOWN</div>
         {Object.entries(domainStats).map(([domain, s]) => {
           if (s.attempted === 0) return null;
           const pct = Math.round((s.green / s.attempted) * 100);
           return (
-            <div key={domain} style={{ marginBottom:8 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, marginBottom:3 }}>
-                <span style={{ color:C.white }}>{domain}</span>
-                <span style={{ color:C.muted }}>
+            <div key={domain} style={{ marginBottom: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
+                <span style={{ color: C.white }}>{domain}</span>
+                <span style={{ color: C.muted }}>
                   {s.attempted} done · {pct}% confident
-                  {BLUEPRINT[domain] && <span style={{ marginLeft:6, padding:'1px 5px', borderRadius:3, background:'#1A3060', fontSize:9, color:C.teal }}>{BLUEPRINT[domain]}% exam</span>}
+                  {BLUEPRINT[domain] && <span style={{ marginLeft: 6, padding: '1px 5px', borderRadius: 3, background: '#1A3060', fontSize: 9, color: C.teal }}>{BLUEPRINT[domain]}% exam</span>}
                 </span>
               </div>
-              <div style={{ background:'#1A3060', borderRadius:4, height:6, overflow:'hidden' }}>
-                <div style={{ display:'flex', height:'100%' }}>
-                  <div style={{ width:`${(s.green/s.attempted)*100}%`, background:'#4CAF50' }}/>
-                  <div style={{ width:`${(s.amber/s.attempted)*100}%`, background:C.gold }}/>
-                  <div style={{ width:`${(s.red/s.attempted)*100}%`, background:C.coral }}/>
+              <div style={{ background: '#1A3060', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+                <div style={{ display: 'flex', height: '100%' }}>
+                  <div style={{ width: `${(s.green / s.attempted) * 100}%`, background: C.green }} />
+                  <div style={{ width: `${(s.amber / s.attempted) * 100}%`, background: C.gold }} />
+                  <div style={{ width: `${(s.red / s.attempted) * 100}%`, background: C.coral }} />
                 </div>
               </div>
             </div>
           );
         })}
         {Object.values(domainStats).every(s => s.attempted === 0) && (
-          <div style={{ color:C.muted, fontSize:12, textAlign:'center', padding:'10px 0' }}>
-            Complete some cases and rate them to see domain breakdown
-          </div>
+          <div style={{ color: C.muted, fontSize: 12, textAlign: 'center', padding: '10px 0' }}>Complete some cases and rate them to see domain breakdown</div>
         )}
       </div>
-
       {/* AI Study Plan */}
-      <div style={{ background:C.card, borderRadius:10, padding:14 }}>
-        <div style={{ fontWeight:'bold', color:C.teal, fontSize:13, marginBottom:10 }}>AI STUDY PLAN</div>
+      <div style={{ background: C.card, borderRadius: 10, padding: 14 }}>
+        <div style={{ fontWeight: 'bold', color: C.teal, fontSize: 13, marginBottom: 10 }}>⚡ AI STUDY PLAN</div>
         {totalAttempted === 0 ? (
-          <div style={{ color:C.muted, fontSize:12 }}>Complete and rate at least 5 cases to generate a personalised study plan.</div>
+          <div style={{ color: C.muted, fontSize: 12 }}>Complete and rate at least 5 cases to generate a personalised study plan.</div>
         ) : summary ? (
-          <div style={{ fontSize:12, lineHeight:1.7, color:C.white, whiteSpace:'pre-wrap' }}>{summary}</div>
+          <div style={{ fontSize: 12, lineHeight: 1.7, color: C.white, whiteSpace: 'pre-wrap' }}>{summary}</div>
         ) : (
           <button onClick={generateSummary} disabled={loading}
-            style={{ width:'100%', padding:12, borderRadius:8, border:'none', background: loading ? C.card2 : C.teal, color: loading ? C.muted : C.dark, fontWeight:'bold', cursor: loading ? 'default' : 'pointer', fontSize:13 }}>
+            style={{ width: '100%', padding: 12, borderRadius: 8, border: 'none', background: loading ? C.card2 : C.teal, color: loading ? C.muted : C.dark, fontWeight: 'bold', cursor: loading ? 'default' : 'pointer', fontSize: 13 }}>
             {loading ? 'Generating your study plan...' : '⚡ Generate Personalised Study Plan'}
           </button>
         )}
         {summary && (
-          <button onClick={()=>setSummary(null)} style={{ marginTop:10, width:'100%', padding:8, borderRadius:8, border:`1px solid ${C.muted}40`, background:'transparent', color:C.muted, fontSize:11, cursor:'pointer' }}>
-            Regenerate
-          </button>
+          <button onClick={() => setSummary(null)} style={{ marginTop: 10, width: '100%', padding: 8, borderRadius: 8, border: `1px solid ${C.muted}40`, background: 'transparent', color: C.muted, fontSize: 11, cursor: 'pointer' }}>Regenerate</button>
         )}
       </div>
     </div>
   );
 }
 
+// ─── FLASHCARD PANEL ──────────────────────────────────────────────────────
+function FlashcardPanel({ rag, srData, updateSrData }) {
+  const [filter, setFilter] = useState('due'); // due | weak | all
+  const [idx, setIdx] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+  const [probeIdx, setProbeIdx] = useState(0);
+
+  const queue = useMemo(() => {
+    let pool = CASES;
+    if (filter === 'due') pool = CASES.filter(c => isDue(srData[String(c.id)]));
+    if (filter === 'weak') pool = CASES.filter(c => rag[String(c.id)] === 'red' || rag[String(c.id)] === 'amber');
+    // Shuffle
+    return [...pool].sort(() => Math.random() - 0.5);
+  // eslint-disable-next-line
+  }, [filter]);
+
+  const card = queue[idx % Math.max(queue.length, 1)];
+  const probe = card ? card.key_probes[probeIdx % card.key_probes.length] : null;
+  const pearl = card ? card.pearls[probeIdx % card.pearls.length] : null;
+
+  const rate = (quality) => {
+    if (!card) return;
+    updateSrData(String(card.id), sm2Update(quality, srData[String(card.id)]));
+    setRevealed(false);
+    setProbeIdx(0);
+    setIdx(i => i + 1);
+  };
+
+  if (queue.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
+        <div style={{ color: C.teal, fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>
+          {filter === 'due' ? 'No cards due today!' : 'No cases in this filter.'}
+        </div>
+        <div style={{ color: C.muted, fontSize: 12, marginBottom: 20 }}>
+          {filter === 'due' ? 'Come back tomorrow or switch to All Cases.' : 'Rate some cases first.'}
+        </div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+          {[['due', '🔔 Due'], ['weak', '⚠ Weak'], ['all', '📋 All']].map(([v, l]) => (
+            <button key={v} onClick={() => { setFilter(v); setIdx(0); }}
+              style={{ padding: '8px 16px', borderRadius: 7, border: 'none', cursor: 'pointer', background: filter === v ? C.teal : C.card2, color: filter === v ? C.dark : C.muted, fontWeight: 'bold', fontSize: 12 }}>{l}</button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Filter + progress */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {[['due', '🔔 Due'], ['weak', '⚠ Weak'], ['all', '📋 All']].map(([v, l]) => (
+            <button key={v} onClick={() => { setFilter(v); setIdx(0); setRevealed(false); setProbeIdx(0); }}
+              style={{ padding: '5px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', background: filter === v ? C.teal : C.card2, color: filter === v ? C.dark : C.muted, fontWeight: 'bold', fontSize: 11 }}>{l}</button>
+          ))}
+        </div>
+        <div style={{ fontSize: 11, color: C.muted }}>{(idx % queue.length) + 1} / {queue.length}</div>
+      </div>
+      {/* Card */}
+      <div style={{ background: C.card, borderRadius: 12, overflow: 'hidden', marginBottom: 12 }}>
+        {/* Card header */}
+        <div style={{ background: C.card2, padding: '10px 14px', borderBottom: `2px solid ${C.teal}` }}>
+          <div style={{ fontSize: 10, color: C.teal, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 2 }}>
+            Case {card.id} · {card.domain}
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 'bold' }}>{card.title}</div>
+          <div style={{ fontSize: 10, color: rag[String(card.id)] === 'green' ? C.green : rag[String(card.id)] === 'amber' ? C.gold : rag[String(card.id)] === 'red' ? C.coral : C.muted, marginTop: 3 }}>
+            {rag[String(card.id)] ? `Previously: ${rag[String(card.id)]}` : 'Not yet rated'}
+            {isDue(srData[String(card.id)]) && <span style={{ marginLeft: 8, color: C.gold }}>🔔 Due for review</span>}
+          </div>
+        </div>
+        {/* Probe */}
+        <div style={{ padding: '16px 14px' }}>
+          <div style={{ fontSize: 10, color: C.muted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>Examiner Question {probeIdx + 1}/{card.key_probes.length}</div>
+          <div style={{ fontSize: 15, color: C.white, lineHeight: 1.6, marginBottom: 16 }}>{probe}</div>
+          {/* Navigation between probes */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+            {card.key_probes.map((_, i) => (
+              <button key={i} onClick={() => { setProbeIdx(i); setRevealed(false); }}
+                style={{ width: 24, height: 6, borderRadius: 3, border: 'none', cursor: 'pointer', background: i === probeIdx ? C.teal : '#2A4070' }} />
+            ))}
+          </div>
+          {/* Reveal */}
+          {!revealed ? (
+            <button onClick={() => setRevealed(true)}
+              style={{ width: '100%', padding: '12px', borderRadius: 8, border: `1px solid ${C.teal}60`, background: 'transparent', color: C.teal, fontWeight: 'bold', cursor: 'pointer', fontSize: 14 }}>
+              💡 Reveal Pearl Answer
+            </button>
+          ) : (
+            <div style={{ background: C.pearlBg, borderLeft: `4px solid ${C.teal}`, borderRadius: 8, padding: '12px 14px' }}>
+              <div style={{ fontSize: 10, color: C.teal, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>◆ Pearl</div>
+              <div style={{ fontSize: 13, lineHeight: 1.65, color: C.white }}>{pearl}</div>
+            </div>
+          )}
+        </div>
+      </div>
+      {/* Rating buttons (drive SM-2) */}
+      {revealed && (
+        <div>
+          <div style={{ fontSize: 11, color: C.muted, textAlign: 'center', marginBottom: 8 }}>How well did you answer this?</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+            {[
+              { q: 'red',   label: '✗ Forgot',   color: C.coral,  sub: 'Review in 1 day' },
+              { q: 'amber', label: '~ Partial',   color: C.gold,   sub: 'Review in ~3 days' },
+              { q: 'green', label: '✓ Got it',    color: C.green,  sub: 'See you in a week+' },
+            ].map(({ q, label, color, sub }) => (
+              <button key={q} onClick={() => rate(q)}
+                style={{ padding: '12px 6px', borderRadius: 9, border: `2px solid ${color}50`, background: `${color}18`, color: color, fontWeight: 'bold', cursor: 'pointer', fontSize: 13 }}>
+                {label}
+                <div style={{ fontSize: 9, color: C.muted, fontWeight: 'normal', marginTop: 3 }}>{sub}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────
+const RAG_OPTIONS = [
+  { val: 'green', label: '✓ Confident', color: '#4CAF50' },
+  { val: 'amber', label: '⚠ Review',    color: '#FFD54F' },
+  { val: 'red',   label: '✗ Weak',      color: '#FF5252' },
+];
+const persist = (data) => { try { localStorage.setItem('edic_master', JSON.stringify(data)); } catch {} };
+
+const EXAMINER_SYSTEM = (c) => `You are a senior EDIC Part 2 CCS examiner. You are conducting a structured 25-minute clinical viva on a real ICU case.
+CASE: ${c.title} | ${c.domain}
+STEM: ${c.stem}
+PROGRESSIVE DATA — release only when the candidate's management logically triggers it:
+${c.progressive_data.map((d, i) => `[${i + 1}] ${d}`).join('\n')}
+KEY CLINICAL AREAS for this case (work through these in order — do not skip ahead):
+${c.key_probes.map((p, i) => `${i + 1}. ${p}`).join('\n')}
+2024–2026 UPDATES (use only when directly relevant to this case):
+TIGRIS (Lancet 2026): PMX hemoadsorption for endotoxic septic shock, EAA 0.60–0.90, NNT 9.7 at 28d. Not USA-approved yet.
+SSC 2024 update: HFNO preferred over NIV for sepsis-induced hypoxaemic respiratory failure. Core bundle unchanged.
+Refractory septic shock: methylene blue 1–2 mg/kg (iNOS inhibitor). CRRT does not reverse vasoplegia.
+YOUR BEHAVIOUR AS EXAMINER:
+STAY ON TOPIC. Work through key clinical areas in order. Do not jump ahead until current one is adequately answered.
+WHEN THE CANDIDATE ANSWERS WELL: Move to next key clinical area. State what data is now available and what the next problem is.
+WHEN THE ANSWER IS INCOMPLETE: Ask one focused follow-up on the same topic. Do not move on until the core point is addressed.
+WHEN THE ANSWER IS VAGUE: Ask for one specific thing — a number, a drug, a threshold. Stay on the same topic.
+WHEN WRONG INFORMATION: Do not confirm it. Ask "Are you certain about that?" or "What does the guideline say?"
+WHEN THE CANDIDATE CORRECTLY CHALLENGES YOU: Say "You are right." then move to the next clinical area immediately.
+EVIDENCE RULE: Only probe on things supported by SSC, ESICM, ERC, BTF, KDIGO or major trials.
+FORMAT: 1–2 sentences only. Never more. No bullet points. No lists. No encouragement. No preamble. Speak like an examiner who has done this 500 times.`;
+
+const buildMessages = (msgs) => {
+  const out = [];
+  for (const m of msgs) out.push({ role: m.role === 'examiner' ? 'assistant' : 'user', content: m.content });
+  if (out.length && out[0].role === 'assistant') out.unshift({ role: 'user', content: 'Begin.' });
+  return out;
+};
+
 export default function App() {
   const [view, setView]           = useState('dashboard');
   const [dashTab, setDashTab]     = useState('cases');
-  const [timeLeft, setTimeLeft]   = useState(25 * 60); // 25 min in seconds
-  const [timerActive, setTimerActive] = useState(false);
-  const [score, setScore]         = useState(null);
-  const [scoring, setScoring]     = useState(false);
   const [activeCase, setActive]   = useState(null);
   const [messages, setMessages]   = useState([]);
   const [input, setInput]         = useState('');
   const [streaming, setStreaming] = useState(false);
-  const [progress, setProgress]   = useState({ rag:{}, attempted:{} });
-
+  const [timeLeft, setTimeLeft]   = useState(25 * 60);
+  const [timerActive, setTimerActive] = useState(false);
+  const [score, setScore]         = useState(null);
+  const [scoring, setScoring]     = useState(false);
+  const [search, setSearch]       = useState('');
+  const [filterDomain, setFilterDomain] = useState('All');
+  const [apiKey, setApiKey]       = useState(() => { try { return localStorage.getItem('edic_apikey') || ''; } catch { return ''; } });
+  const [showApiInput, setShowApiInput] = useState(false);
+  const [progress, setProgress]   = useState({ rag: {}, attempted: {}, sr: {} });
   const endRef   = useRef(null);
   const taRef    = useRef(null);
   const abortRef = useRef(null);
   const msgsRef  = useRef([]);
 
-  // Load progress from storage once on mount
+  // Load progress on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem('edic_master');
       if (saved) {
         const d = JSON.parse(saved);
-        setProgress({ rag: d.rag||{}, attempted: d.attempted||{} });
+        setProgress({ rag: d.rag || {}, attempted: d.attempted || {}, sr: d.sr || {} });
       }
     } catch {}
   }, []);
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior:'smooth' });
-  }, [messages]);
-
-  // Keep msgsRef in sync for use inside stream callback
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
   useEffect(() => { msgsRef.current = messages; }, [messages]);
+
+  const saveApiKey = (k) => {
+    setApiKey(k);
+    try { localStorage.setItem('edic_apikey', k); } catch {}
+  };
 
   const updateProgress = (patch) => {
     setProgress(prev => {
-      const next = { ...prev, ...patch, rag:{...prev.rag,...(patch.rag||{})}, attempted:{...prev.attempted,...(patch.attempted||{})} };
+      const next = { rag: { ...prev.rag, ...(patch.rag || {}) }, attempted: { ...prev.attempted, ...(patch.attempted || {}) }, sr: { ...prev.sr, ...(patch.sr || {}) } };
       persist(next);
       return next;
     });
   };
 
-  // ── TIMER ─────────────────────────────────────────────────────────────────
+  // SM-2 update helper
+  const updateSrData = (id, srRec) => updateProgress({ sr: { [id]: srRec } });
+
+  // Timer
   useEffect(() => {
     if (!timerActive || timeLeft <= 0) return;
     const t = setInterval(() => setTimeLeft(s => s - 1), 1000);
     return () => clearInterval(t);
   }, [timerActive, timeLeft]);
+  const fmtTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  const timerColour = timeLeft <= 120 ? C.coral : timeLeft <= 300 ? C.gold : C.green;
 
-  const fmtTime = (s) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
-  const timerColour = timeLeft <= 120 ? C.coral : timeLeft <= 300 ? C.gold : '#4CAF50';
-
-  // ── STREAMING ─────────────────────────────────────────────────────────────
+  // Streaming
   const runStream = useCallback(async (systemPrompt, apiMsgs, onChunk) => {
+    const key = apiKey || (import.meta.env && import.meta.env.VITE_ANTHROPIC_API_KEY) || '';
+    if (!key) { onChunk('\n[No API key set. Click "API Key" in the header to add your Anthropic API key.]'); return; }
     const controller = new AbortController();
     abortRef.current = controller;
     setStreaming(true);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
+        headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         signal: controller.signal,
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 200,
-          stream: true,
-          system: systemPrompt,
-          messages: apiMsgs
-        })
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 200, stream: true, system: systemPrompt, messages: apiMsgs })
       });
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const reader = res.body.getReader();
@@ -2537,38 +2407,30 @@ export default function App() {
           if (!line.startsWith('data: ')) continue;
           const d = line.slice(6).trim();
           if (d === '[DONE]') break;
-          try {
-            const chunk = JSON.parse(d)?.delta?.text;
-            if (chunk) onChunk(chunk);
-          } catch {}
+          try { const chunk = JSON.parse(d)?.delta?.text; if (chunk) onChunk(chunk); } catch {}
         }
       }
     } catch (e) {
-      if (e.name !== 'AbortError') onChunk(`\n[Connection error: ${e.message}]`);
+      if (e.name !== 'AbortError') onChunk(`\n[Error: ${e.message}]`);
     } finally {
       setStreaming(false);
       setTimeout(() => taRef.current?.focus(), 50);
     }
-  }, []);
+  }, [apiKey]);
 
-  // ── START VIVA ─────────────────────────────────────────────────────────────
+  // Start viva
   const startViva = (c) => {
     updateProgress({ attempted: { [String(c.id)]: true } });
     setActive(c);
     setView('viva');
-
-    // Show stem + opening question INSTANTLY from local data — zero API wait
-    const openingMsg = {
-      role: 'examiner',
-      content: c.stem + '\n\n' + 'Talk me through your immediate priorities.'
-    };
-    setMessages([openingMsg]);
+    const opening = { role: 'examiner', content: c.stem + '\n\nTalk me through your immediate priorities.' };
+    setMessages([opening]);
     setTimeLeft(25 * 60);
     setTimerActive(true);
     setScore(null);
   };
 
-  // ── SEND CANDIDATE MESSAGE ─────────────────────────────────────────────────
+  // Send candidate message
   const sendMsg = () => {
     if (!input.trim() || streaming) return;
     const text = input.trim();
@@ -2576,444 +2438,365 @@ export default function App() {
     const prev = msgsRef.current;
     const withCandidate = [...prev, { role: 'candidate', content: text }];
     setMessages(withCandidate);
-
     let reply = '';
     setTimeout(() => {
-      runStream(
-        EXAMINER_SYSTEM(activeCase),
-        buildMessages(withCandidate),
-        (chunk) => {
-          reply += chunk;
-          setMessages([...withCandidate, { role: 'examiner', content: reply }]);
-        }
-      );
+      runStream(EXAMINER_SYSTEM(activeCase), buildMessages(withCandidate), (chunk) => {
+        reply += chunk;
+        setMessages([...withCandidate, { role: 'examiner', content: reply }]);
+      });
     }, 10);
   };
+  const handleKey = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } };
 
-  const handleKey = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
-  };
-
-  // ── ATTEMPT TRANSCRIPT STORAGE (localStorage — persists on Vercel) ──────────
+  // Save attempt transcript
   const saveAttempt = (caseObj, msgs) => {
     try {
       const key = 'edic_attempts';
       const existing = JSON.parse(localStorage.getItem(key) || '[]');
-      const attempt = {
-        id: caseObj.id,
-        title: caseObj.title,
-        domain: caseObj.domain,
-        difficulty: caseObj.difficulty,
-        timestamp: new Date().toISOString(),
-        rag: progress.rag[String(caseObj.id)] || null,
-        msgCount: msgs.filter(m => m.role === 'candidate').length,
-        // Store condensed transcript — candidate messages only for weak area analysis
-        transcript: msgs.filter(m => m.role === 'candidate').map(m => m.content).join(' | '),
-      };
-      // Keep last 200 attempts
-      const updated = [attempt, ...existing].slice(0, 200);
-      localStorage.setItem(key, JSON.stringify(updated));
-    } catch(e) {}
+      const attempt = { id: caseObj.id, title: caseObj.title, domain: caseObj.domain, difficulty: caseObj.difficulty, timestamp: new Date().toISOString(), rag: progress.rag[String(caseObj.id)] || null, msgCount: msgs.filter(m => m.role === 'candidate').length, transcript: msgs.filter(m => m.role === 'candidate').map(m => m.content).join(' | ') };
+      localStorage.setItem(key, JSON.stringify([attempt, ...existing].slice(0, 200)));
+    } catch {}
   };
 
-  const getAttempts = () => {
-    try { return JSON.parse(localStorage.getItem('edic_attempts') || '[]'); } catch { return []; }
-  };
-
-  // ── AI SCORING ENGINE ────────────────────────────────────────────────────
+  // AI scoring
   const generateScore = async (caseObj, msgs, timeTaken) => {
-    setScoring(true);
-    setScore(null);
+    const key = apiKey || (import.meta.env && import.meta.env.VITE_ANTHROPIC_API_KEY) || '';
+    if (!key) { setScore({ error: 'Add your Anthropic API key to generate an AI score.' }); return; }
+    setScoring(true); setScore(null);
     try {
       const transcript = msgs.map(m => `${m.role === 'candidate' ? 'CANDIDATE' : 'EXAMINER'}: ${m.content}`).join('\n');
-      const minutesTaken = Math.round((25*60 - timeTaken) / 60);
-
-      const prompt = `You are an EDIC Part 2 examiner marking a CCS viva. Score this candidate's performance.
-
+      const mins = Math.round((25 * 60 - timeTaken) / 60);
+      const prompt = `You are an EDIC Part 2 examiner marking a CCS viva. Score this candidate.
 CASE: ${caseObj.title} | ${caseObj.domain} | Difficulty: ${caseObj.difficulty}
-TIME USED: approximately ${minutesTaken} minutes of 25 minutes
-
+TIME USED: ~${mins} minutes of 25 minutes
 TRANSCRIPT:
 ${transcript}
-
-EXPECTED KNOWLEDGE (pearls): ${(caseObj.pearls||[]).join(' | ')}
-COMMON PITFALLS: ${(caseObj.pitfalls||[]).join(' | ')}
-
-Score the candidate on FOUR DOMAINS used in the real EDIC Part 2 CCS. For each domain give: score (0-3), verdict (Excellent/Satisfactory/Borderline/Unsatisfactory), and one specific sentence of feedback.
-
-DOMAIN 1 — CLINICAL KNOWLEDGE: Correct diagnoses, pathophysiology, guideline-based thresholds and doses
-DOMAIN 2 — MANAGEMENT PRIORITIES: Systematic approach, correct prioritisation, appropriate escalation
-DOMAIN 3 — DECISION-MAKING UNDER UNCERTAINTY: Response to progressive data, challenging scenarios, adapting when challenged
-DOMAIN 4 — PROFESSIONALISM & COMMUNICATION: Structure of answers, use of evidence, handling of uncertainty, ethical reasoning if relevant
-
-Then give:
-OVERALL VERDICT: Pass / Borderline Pass / Borderline Fail / Fail
-PASS MARK RATIONALE: One sentence explaining the overall verdict
-TOP 3 THINGS DONE WELL: Specific bullet points from the transcript
-TOP 3 GAPS TO ADDRESS: Specific knowledge or skill gaps with what to study
-
-Respond in this exact JSON format:
-{
-  "domains": [
-    {"name": "Clinical Knowledge", "score": 0, "verdict": "", "feedback": ""},
-    {"name": "Management Priorities", "score": 0, "verdict": "", "feedback": ""},
-    {"name": "Decision-Making", "score": 0, "verdict": "", "feedback": ""},
-    {"name": "Professionalism", "score": 0, "verdict": "", "feedback": ""}
-  ],
-  "overall": "",
-  "rationale": "",
-  "strengths": ["", "", ""],
-  "gaps": ["", "", ""]
-}`;
-
+PEARLS: ${(caseObj.pearls || []).join(' | ')}
+PITFALLS: ${(caseObj.pitfalls || []).join(' | ')}
+Score on FOUR DOMAINS. For each: score (0-3), verdict (Excellent/Satisfactory/Borderline/Unsatisfactory), one specific sentence of feedback.
+DOMAIN 1 — CLINICAL KNOWLEDGE
+DOMAIN 2 — MANAGEMENT PRIORITIES
+DOMAIN 3 — DECISION-MAKING UNDER UNCERTAINTY
+DOMAIN 4 — PROFESSIONALISM & COMMUNICATION
+Then: OVERALL VERDICT (Pass/Borderline Pass/Borderline Fail/Fail), PASS MARK RATIONALE, TOP 3 DONE WELL, TOP 3 GAPS.
+Respond in exact JSON:
+{"domains":[{"name":"Clinical Knowledge","score":0,"verdict":"","feedback":""},{"name":"Management Priorities","score":0,"verdict":"","feedback":""},{"name":"Decision-Making","score":0,"verdict":"","feedback":""},{"name":"Professionalism","score":0,"verdict":"","feedback":""}],"overall":"","rationale":"","strengths":["","",""],"gaps":["","",""]}`;
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 800,
-          messages: [{ role: 'user', content: prompt }]
-        })
+        headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
       });
       const data = await res.json();
       const text = data.content?.[0]?.text || '';
-      const start = text.indexOf('{');
-      const end = text.lastIndexOf('}');
-      const parsed = JSON.parse(text.slice(start, end + 1));
+      const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
       setScore(parsed);
-
-      // Save score to attempt history
       try {
-        const key = 'edic_attempts';
-        const existing = JSON.parse(localStorage.getItem(key) || '[]');
-        if (existing.length > 0 && existing[0].id === caseObj.id) {
-          existing[0].score = parsed;
-          localStorage.setItem(key, JSON.stringify(existing));
-        }
-      } catch(e) {}
-
-    } catch(e) {
-      setScore({ error: 'Score generation failed: ' + e.message + '. Check pearls and pitfalls below.' });
-    }
+        const existing = JSON.parse(localStorage.getItem('edic_attempts') || '[]');
+        if (existing.length > 0 && existing[0].id === caseObj.id) { existing[0].score = parsed; localStorage.setItem('edic_attempts', JSON.stringify(existing)); }
+      } catch {}
+    } catch (e) { setScore({ error: 'Score generation failed: ' + e.message }); }
     setScoring(false);
   };
 
   const saveRag = (id, val) => {
-    updateProgress({ rag: { [String(id)]: val } });
+    // RAG rating also drives SM-2
+    const srUpdate = sm2Update(val, progress.sr[String(id)]);
+    updateProgress({ rag: { [String(id)]: val }, sr: { [String(id)]: srUpdate } });
   };
 
-  // ── STATS ──────────────────────────────────────────────────────────────────
-  const { rag, attempted } = progress;
+  // Stats
+  const { rag, attempted, sr } = progress;
   const stats = {
     attempted: Object.keys(attempted).length,
-    green:  Object.values(rag).filter(v => v==='green').length,
-    amber:  Object.values(rag).filter(v => v==='amber').length,
-    red:    Object.values(rag).filter(v => v==='red').length,
+    green: Object.values(rag).filter(v => v === 'green').length,
+    amber: Object.values(rag).filter(v => v === 'amber').length,
+    red: Object.values(rag).filter(v => v === 'red').length,
+    due: CASES.filter(c => isDue(sr[String(c.id)])).length,
   };
+  const domains = ['All', ...new Set(CASES.map(c => c.domain))];
+  const filtered = useMemo(() => CASES.filter(c => {
+    const md = filterDomain === 'All' || c.domain === filterDomain;
+    const ms = search === '' || c.title.toLowerCase().includes(search.toLowerCase()) || c.domain.toLowerCase().includes(search.toLowerCase());
+    return md && ms;
+  }), [filterDomain, search]);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // DASHBOARD
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─── DASHBOARD ────────────────────────────────────────────────────────────
   if (view === 'dashboard') return (
-    <div style={{ background:C.bg, minHeight:'100vh', fontFamily:'Calibri,sans-serif', color:C.white, padding:'22px 24px' }}>
-
-      <div style={{ display:'flex', gap:12, alignItems:'center', marginBottom:20 }}>
-        <div style={{ width:5, height:46, background:C.teal, borderRadius:3 }}/>
-        <div>
-          <div style={{ fontSize:20, fontWeight:'bold', color:C.teal }}>EDIC Part 2 — CCS Viva Trainer</div>
-          <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>All 120 Cases · Full EDIC Part 2 Curriculum</div>
-        </div>
-      </div>
-
-      {/* Tab Toggle */}
-      <div style={{ display:'flex', gap:8, marginBottom:16 }}>
-        {[['cases','📋 Cases'],['analytics','📊 Analytics']].map(([t,l]) => (
-          <button key={t} onClick={()=>setDashTab(t)} style={{ padding:'7px 18px', borderRadius:7, border:'none', cursor:'pointer', fontSize:13, fontWeight:'bold', background: dashTab===t ? C.teal : C.card2, color: dashTab===t ? C.dark : C.muted }}>{l}</button>
-        ))}
-      </div>
-
-      {/* Stats */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:16 }}>
-        {[
-          { l:'Attempted', v:stats.attempted, c:C.teal },
-          { l:'Confident', v:stats.green,     c:'#4CAF50' },
-          { l:'Review',    v:stats.amber,      c:C.gold },
-          { l:'Weak',      v:stats.red,        c:C.coral },
-        ].map(s => (
-          <div key={s.l} style={{ background:C.card, borderRadius:9, padding:'12px 14px', textAlign:'center', borderTop:`3px solid ${s.c}` }}>
-            <div style={{ fontSize:30, fontWeight:'bold', color:s.c, lineHeight:1 }}>{s.v}</div>
-            <div style={{ color:C.muted, fontSize:10, marginTop:4, textTransform:'uppercase', letterSpacing:0.8 }}>{s.l}</div>
+    <div style={{ background: C.bg, minHeight: '100vh', fontFamily: 'Calibri,sans-serif', color: C.white }}>
+      {/* Header */}
+      <div style={{ background: C.dark, borderBottom: `2px solid ${C.teal}`, padding: '14px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ width: 4, height: 40, background: C.teal, borderRadius: 3 }} />
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 'bold', color: C.teal }}>EDIC Part 2 — CCS Viva Trainer</div>
+            <div style={{ fontSize: 10, color: C.muted }}>120 Cases · All Domains · AI Examiner + SM-2 Spaced Repetition</div>
           </div>
-        ))}
-      </div>
-
-      {/* Progress bar */}
-      <div style={{ marginBottom:20 }}>
-        <div style={{ height:5, background:C.card2, borderRadius:3, overflow:'hidden', display:'flex' }}>
-          <div style={{ width:`${(stats.green/120*100).toFixed(1)}%`, background:'#4CAF50', transition:'width 0.4s' }}/>
-          <div style={{ width:`${(stats.amber/120*100).toFixed(1)}%`, background:C.gold, transition:'width 0.4s' }}/>
-          <div style={{ width:`${(stats.red/120*100).toFixed(1)}%`, background:C.coral, transition:'width 0.4s' }}/>
-          <div style={{ width:`${(stats.attempted - stats.green - stats.amber - stats.red)*10}%`, background:C.teal+'60', transition:'width 0.4s' }}/>
         </div>
-        <div style={{ fontSize:10, color:C.muted, marginTop:5 }}>{stats.attempted}/10 attempted · {stats.green + stats.amber + stats.red}/10 rated</div>
-      </div>
-
-      {dashTab === 'analytics' ? (
-        <AnalyticsPanel getAttempts={getAttempts} rag={rag} cases={CASES} C={C} />
-      ) : (
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12 }}>
-        {CASES.map(c => {
-          const r = rag[String(c.id)];
-          const isAttempted = attempted[String(c.id)];
-          const rc = r==='green' ? '#4CAF50' : r==='amber' ? C.gold : r==='red' ? C.coral : isAttempted ? C.teal+'80' : '#2A4070';
-          const dc = c.difficulty==='High' ? C.coral : C.gold;
-          return (
-            <div key={c.id} onClick={() => startViva(c)}
-              style={{ background:C.card, borderRadius:9, overflow:'hidden', cursor:'pointer', border:`1px solid ${rc}40`, transition:'transform 0.12s, box-shadow 0.12s' }}
-              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow=`0 5px 18px ${C.teal}22`; }}
-              onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
-              <div style={{ height:4, background:rc }}/>
-              <div style={{ padding:'13px 15px' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8 }}>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:10, color:C.teal, fontWeight:'bold', textTransform:'uppercase', letterSpacing:1.5 }}>Case {c.id}</div>
-                    <div style={{ fontSize:14, fontWeight:'bold', marginTop:3, lineHeight:1.3 }}>{c.title}</div>
-                    <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>{c.domain}</div>
-                  </div>
-                  <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4, flexShrink:0 }}>
-                    <span style={{ background:dc+'18', color:dc, fontSize:10, fontWeight:'bold', padding:'2px 7px', borderRadius:4, border:`1px solid ${dc}40`, textTransform:'uppercase' }}>{c.difficulty}</span>
-                    {r && <span style={{ background:rc+'18', color:rc, fontSize:10, fontWeight:'bold', padding:'2px 7px', borderRadius:4, border:`1px solid ${rc}40`, textTransform:'uppercase' }}>{r==='green'?'Confident':r==='amber'?'Review':'Weak'}</span>}
-                    {!r && isAttempted && <span style={{ background:C.teal+'18', color:C.teal, fontSize:10, fontWeight:'bold', padding:'2px 7px', borderRadius:4, border:`1px solid ${C.teal}40`, textTransform:'uppercase' }}>Done</span>}
-                  </div>
-                </div>
-                <div style={{ marginTop:9, display:'flex', flexWrap:'wrap', gap:4 }}>
-                  {c.key_probes.slice(0,3).map((p,i) => (
-                    <span key={i} style={{ fontSize:10, color:C.muted, background:C.bg, padding:'2px 6px', borderRadius:3, border:'1px solid #2A4070' }}>
-                      {p.split(' ').slice(0,4).join(' ')}...
-                    </span>
-                  ))}
-                </div>
-              </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {stats.due > 0 && (
+            <div onClick={() => setDashTab('flashcard')} style={{ background: `${C.gold}20`, border: `1px solid ${C.gold}60`, borderRadius: 7, padding: '4px 10px', cursor: 'pointer' }}>
+              <span style={{ color: C.gold, fontWeight: 'bold', fontSize: 12 }}>🔔 {stats.due} due</span>
             </div>
-          );
-        })}
+          )}
+          <button onClick={() => setShowApiInput(v => !v)} style={{ padding: '6px 14px', borderRadius: 7, border: `1px solid ${apiKey ? C.green : C.coral}60`, background: 'transparent', color: apiKey ? C.green : C.coral, fontSize: 11, cursor: 'pointer', fontWeight: 'bold' }}>
+            {apiKey ? '🔑 API Key ✓' : '🔑 Add API Key'}
+          </button>
+        </div>
       </div>
+      {/* API Key input (collapsible) */}
+      {showApiInput && (
+        <div style={{ background: C.card2, borderBottom: `1px solid #1E3A5F`, padding: '10px 22px', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 12, color: C.muted }}>Anthropic API key (stored locally, never sent anywhere except Anthropic):</span>
+          <input type="password" value={apiKey} onChange={e => saveApiKey(e.target.value)} placeholder="sk-ant-..." style={{ flex: 1, background: C.bg, color: C.white, border: `1px solid #2A4070`, borderRadius: 6, padding: '5px 10px', fontSize: 12, outline: 'none' }} />
+          <button onClick={() => setShowApiInput(false)} style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: C.teal, color: C.dark, fontWeight: 'bold', cursor: 'pointer', fontSize: 12 }}>Done</button>
+        </div>
       )}
-      <div style={{ marginTop:18, textAlign:'center', fontSize:11, color:'#2A4070' }}>
-        120 Cases · All EDIC Part 2 Domains · Share ↗ to send to colleagues
+      <div style={{ padding: '18px 22px' }}>
+        {/* Stats bar */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: 14 }}>
+          {[
+            { l: 'Attempted', v: stats.attempted, c: C.teal },
+            { l: 'Confident', v: stats.green, c: C.green },
+            { l: 'Review',    v: stats.amber, c: C.gold },
+            { l: 'Weak',      v: stats.red, c: C.coral },
+            { l: 'Due Today', v: stats.due, c: '#FF9800' },
+          ].map(s => (
+            <div key={s.l} style={{ background: C.card, borderRadius: 9, padding: '10px 12px', textAlign: 'center', borderTop: `3px solid ${s.c}` }}>
+              <div style={{ fontSize: 28, fontWeight: 'bold', color: s.c, lineHeight: 1 }}>{s.v}</div>
+              <div style={{ color: C.muted, fontSize: 10, marginTop: 3, textTransform: 'uppercase', letterSpacing: 0.8 }}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+        {/* Progress bar */}
+        <div style={{ height: 5, background: C.card2, borderRadius: 3, overflow: 'hidden', display: 'flex', marginBottom: 16 }}>
+          <div style={{ width: `${(stats.green / 120 * 100).toFixed(1)}%`, background: C.green, transition: 'width 0.4s' }} />
+          <div style={{ width: `${(stats.amber / 120 * 100).toFixed(1)}%`, background: C.gold, transition: 'width 0.4s' }} />
+          <div style={{ width: `${(stats.red / 120 * 100).toFixed(1)}%`, background: C.coral, transition: 'width 0.4s' }} />
+        </div>
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+          {[['cases', '📋 Cases'], ['flashcard', '⚡ Flashcard'], ['analytics', '📊 Analytics']].map(([t, l]) => (
+            <button key={t} onClick={() => setDashTab(t)} style={{ padding: '7px 18px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 'bold', background: dashTab === t ? C.teal : C.card2, color: dashTab === t ? C.dark : C.muted }}>{l}</button>
+          ))}
+        </div>
+        {/* Tab content */}
+        {dashTab === 'analytics' && <AnalyticsPanel rag={rag} srData={sr} apiKey={apiKey} />}
+        {dashTab === 'flashcard' && <FlashcardPanel rag={rag} srData={sr} updateSrData={updateSrData} />}
+        {dashTab === 'cases' && (
+          <>
+            {/* Search + filter */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search cases..." style={{ flex: 1, background: C.card, color: C.white, border: '1px solid #2A4070', borderRadius: 7, padding: '7px 12px', fontSize: 13, outline: 'none' }} />
+              <select value={filterDomain} onChange={e => setFilterDomain(e.target.value)} style={{ background: C.card, color: C.white, border: '1px solid #2A4070', borderRadius: 7, padding: '7px 10px', fontSize: 12, outline: 'none' }}>
+                {domains.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            {/* Case grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12 }}>
+              {filtered.map(c => {
+                const r = rag[String(c.id)];
+                const isAttempted = attempted[String(c.id)];
+                const isDueNow = isDue(sr[String(c.id)]);
+                const rc = r === 'green' ? C.green : r === 'amber' ? C.gold : r === 'red' ? C.coral : isAttempted ? `${C.teal}80` : '#2A4070';
+                const dc = c.difficulty === 'High' ? C.coral : C.gold;
+                return (
+                  <div key={c.id} onClick={() => startViva(c)}
+                    style={{ background: C.card, borderRadius: 9, overflow: 'hidden', cursor: 'pointer', border: `1px solid ${rc}40`, transition: 'transform 0.12s, box-shadow 0.12s' }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 5px 18px ${C.teal}22`; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}>
+                    <div style={{ height: 4, background: rc }} />
+                    <div style={{ padding: '12px 14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, color: C.teal, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1.5 }}>Case {c.id} {isDueNow ? '🔔' : ''}</div>
+                          <div style={{ fontSize: 14, fontWeight: 'bold', marginTop: 3, lineHeight: 1.3 }}>{c.title}</div>
+                          <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{c.domain}</div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                          <span style={{ background: `${dc}18`, color: dc, fontSize: 10, fontWeight: 'bold', padding: '2px 7px', borderRadius: 4, border: `1px solid ${dc}40`, textTransform: 'uppercase' }}>{c.difficulty}</span>
+                          {r && <span style={{ background: `${rc}18`, color: rc, fontSize: 10, fontWeight: 'bold', padding: '2px 7px', borderRadius: 4, border: `1px solid ${rc}40`, textTransform: 'uppercase' }}>{r === 'green' ? 'Confident' : r === 'amber' ? 'Review' : 'Weak'}</span>}
+                          {!r && isAttempted && <span style={{ background: `${C.teal}18`, color: C.teal, fontSize: 10, fontWeight: 'bold', padding: '2px 7px', borderRadius: 4, border: `1px solid ${C.teal}40`, textTransform: 'uppercase' }}>Done</span>}
+                        </div>
+                      </div>
+                      <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {c.key_probes.slice(0, 3).map((p, i) => (
+                          <span key={i} style={{ fontSize: 10, color: C.muted, background: C.bg, padding: '2px 6px', borderRadius: 3, border: '1px solid #2A4070' }}>
+                            {p.split(' ').slice(0, 4).join(' ')}…
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
+      <style>{`@keyframes cur{0%,100%{opacity:1}50%{opacity:0}}`}</style>
     </div>
   );
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // VIVA
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─── VIVA ────────────────────────────────────────────────────────────────
   if (view === 'viva') return (
-    <div style={{ background:C.bg, height:'100vh', display:'flex', flexDirection:'column', fontFamily:'Calibri,sans-serif', color:C.white }}>
-
-      <div style={{ background:C.dark, borderBottom:`2px solid ${C.teal}`, padding:'10px 18px', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+    <div style={{ background: C.bg, height: '100vh', display: 'flex', flexDirection: 'column', fontFamily: 'Calibri,sans-serif', color: C.white }}>
+      <div style={{ background: C.dark, borderBottom: `2px solid ${C.teal}`, padding: '10px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div>
-          <div style={{ fontSize:10, color:C.teal, fontWeight:'bold', textTransform:'uppercase', letterSpacing:1.5 }}>Case {activeCase?.id} · EDIC Part 2 · Live Viva</div>
-          <div style={{ fontSize:16, fontWeight:'bold', marginTop:1 }}>{activeCase?.title}</div>
-          <div style={{ fontSize:11, color:C.muted }}>{activeCase?.domain}</div>
+          <div style={{ fontSize: 10, color: C.teal, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1.5 }}>Case {activeCase?.id} · EDIC Part 2 · Live Viva</div>
+          <div style={{ fontSize: 16, fontWeight: 'bold', marginTop: 1 }}>{activeCase?.title}</div>
+          <div style={{ fontSize: 11, color: C.muted }}>{activeCase?.domain} · {activeCase?.difficulty}</div>
         </div>
-        <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-          <div style={{ textAlign:'center' }}>
-            <div style={{ fontSize:22, fontWeight:'bold', color:timerColour, fontFamily:'monospace' }}>{fmtTime(timeLeft)}</div>
-            <div style={{ fontSize:9, color:C.muted, textTransform:'uppercase', letterSpacing:1 }}>
-              {timeLeft<=0 ? '⏰ TIME UP' : timerActive ? 'remaining' : 'paused'}
-            </div>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 22, fontWeight: 'bold', color: timerColour, fontFamily: 'monospace' }}>{fmtTime(timeLeft)}</div>
+            <div style={{ fontSize: 9, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 }}>{timeLeft <= 0 ? '⏰ TIME UP' : timerActive ? 'remaining' : 'paused'}</div>
           </div>
-          <button onClick={()=>setTimerActive(t=>!t)} style={{ padding:'4px 10px', borderRadius:6, border:`1px solid ${C.muted}40`, background:'transparent', color:C.muted, fontSize:11, cursor:'pointer' }}>
+          <button onClick={() => setTimerActive(t => !t)} style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${C.muted}40`, background: 'transparent', color: C.muted, fontSize: 11, cursor: 'pointer' }}>
             {timerActive ? '⏸' : '▶'}
           </button>
           <button onClick={() => { abortRef.current?.abort(); setView('dashboard'); }}
-            style={{ background:'transparent', color:C.muted, border:`1px solid ${C.muted}40`, padding:'6px 13px', borderRadius:7, cursor:'pointer', fontSize:12 }}>← Dashboard</button>
+            style={{ background: 'transparent', color: C.muted, border: `1px solid ${C.muted}40`, padding: '6px 13px', borderRadius: 7, cursor: 'pointer', fontSize: 12 }}>← Dashboard</button>
           <button onClick={() => { abortRef.current?.abort(); saveAttempt(activeCase, messages); setTimerActive(false); const tl = timeLeft; setView('review'); generateScore(activeCase, messages, tl); }}
-            style={{ background:C.coral+'22', color:C.coral, border:`1px solid ${C.coral}60`, padding:'6px 13px', borderRadius:7, cursor:'pointer', fontSize:12, fontWeight:'bold' }}>End Viva →</button>
+            style={{ background: `${C.coral}22`, color: C.coral, border: `1px solid ${C.coral}60`, padding: '6px 13px', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 'bold' }}>End Viva →</button>
         </div>
       </div>
-
-      <div style={{ flex:1, overflowY:'auto', padding:'16px 22px' }}>
-
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 22px' }}>
         {messages.map((m, i) => (
-          <div key={i} style={{ marginBottom:14, display:'flex', justifyContent: m.role==='candidate' ? 'flex-end' : 'flex-start' }}>
-            <div style={{
-              maxWidth:'78%',
-              background: m.role==='examiner' ? C.card : C.card2,
-              borderRadius:10,
-              borderLeft:  m.role==='examiner' ? `3px solid ${C.teal}` : 'none',
-              borderRight: m.role==='candidate' ? `3px solid ${C.gold}` : 'none',
-              padding:'11px 15px', fontSize:14, lineHeight:1.65
-            }}>
-              <div style={{ fontSize:10, fontWeight:'bold', color: m.role==='examiner' ? C.teal : C.gold, marginBottom:6, textTransform:'uppercase', letterSpacing:1.2 }}>
-                {m.role==='examiner' ? '🩺  Examiner' : '👨‍⚕️  You'}
+          <div key={i} style={{ marginBottom: 14, display: 'flex', justifyContent: m.role === 'candidate' ? 'flex-end' : 'flex-start' }}>
+            <div style={{ maxWidth: '78%', background: m.role === 'examiner' ? C.card : C.card2, borderRadius: 10, borderLeft: m.role === 'examiner' ? `3px solid ${C.teal}` : 'none', borderRight: m.role === 'candidate' ? `3px solid ${C.gold}` : 'none', padding: '11px 15px', fontSize: 14, lineHeight: 1.65 }}>
+              <div style={{ fontSize: 10, fontWeight: 'bold', color: m.role === 'examiner' ? C.teal : C.gold, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1.2 }}>
+                {m.role === 'examiner' ? '🩺  Examiner' : '👨‍⚕️  You'}
               </div>
-              <div style={{ whiteSpace:'pre-wrap' }}>
+              <div style={{ whiteSpace: 'pre-wrap' }}>
                 {m.content}
-                {streaming && i === messages.length-1 && m.role==='examiner' && (
-                  <span style={{ display:'inline-block', width:9, height:14, background:C.teal, borderRadius:2, marginLeft:3, verticalAlign:'text-bottom', animation:'cur 0.8s infinite' }}/>
+                {streaming && i === messages.length - 1 && m.role === 'examiner' && (
+                  <span style={{ display: 'inline-block', width: 9, height: 14, background: C.teal, borderRadius: 2, marginLeft: 3, verticalAlign: 'text-bottom', animation: 'cur 0.8s infinite' }} />
                 )}
               </div>
             </div>
           </div>
         ))}
         <style>{`@keyframes cur{0%,100%{opacity:1}50%{opacity:0}}`}</style>
-        <div ref={endRef}/>
+        <div ref={endRef} />
       </div>
-
-      <div style={{ background:C.dark, borderTop:'1px solid #1E3A5F', padding:'12px 18px', display:'flex', gap:10, alignItems:'flex-end', flexShrink:0 }}>
+      <div style={{ background: C.dark, borderTop: '1px solid #1E3A5F', padding: '12px 18px', display: 'flex', gap: 10, alignItems: 'flex-end', flexShrink: 0 }}>
         <textarea ref={taRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
           placeholder={streaming ? 'Examiner is responding…' : 'Your answer… (Enter to send · Shift+Enter new line)'}
           disabled={streaming}
-          style={{ flex:1, background:C.card, color:C.white, border:'1px solid #2A4070', borderRadius:8, padding:'10px 13px', fontSize:14, resize:'none', height:70, fontFamily:'Calibri,sans-serif', outline:'none', opacity:streaming?0.5:1 }}
+          style={{ flex: 1, background: C.card, color: C.white, border: '1px solid #2A4070', borderRadius: 8, padding: '10px 13px', fontSize: 14, resize: 'none', height: 70, fontFamily: 'Calibri,sans-serif', outline: 'none', opacity: streaming ? 0.5 : 1 }}
         />
         <button onClick={sendMsg} disabled={streaming || !input.trim()}
-          style={{ background: streaming||!input.trim() ? '#1E3A5F' : C.teal, color: streaming||!input.trim() ? C.muted : C.dark, border:'none', borderRadius:8, padding:'0 20px', height:70, fontSize:20, fontWeight:'bold', cursor: streaming||!input.trim() ? 'not-allowed' : 'pointer', transition:'background 0.2s' }}>➤</button>
+          style={{ background: streaming || !input.trim() ? '#1E3A5F' : C.teal, color: streaming || !input.trim() ? C.muted : C.dark, border: 'none', borderRadius: 8, padding: '0 20px', height: 70, fontSize: 20, fontWeight: 'bold', cursor: streaming || !input.trim() ? 'not-allowed' : 'pointer', transition: 'background 0.2s' }}>➤</button>
       </div>
     </div>
   );
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // REVIEW
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─── REVIEW ──────────────────────────────────────────────────────────────
   if (view === 'review') {
     const currentRag = rag[String(activeCase?.id)];
     const nextCase = CASES[CASES.findIndex(c => c.id === activeCase?.id) + 1];
+    const srRec = sr[String(activeCase?.id)];
     return (
-      <div style={{ background:C.bg, minHeight:'100vh', fontFamily:'Calibri,sans-serif', color:C.white, padding:'22px 24px' }}>
-
-        <div style={{ display:'flex', gap:12, alignItems:'center', marginBottom:20 }}>
-          <div style={{ width:5, height:46, background:C.teal, borderRadius:3 }}/>
+      <div style={{ background: C.bg, minHeight: '100vh', fontFamily: 'Calibri,sans-serif', color: C.white, padding: '22px 24px' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ width: 5, height: 46, background: C.teal, borderRadius: 3 }} />
           <div>
-            <div style={{ fontSize:10, color:C.teal, fontWeight:'bold', textTransform:'uppercase', letterSpacing:1.5 }}>Case {activeCase?.id} · Post-Viva Review</div>
-            <div style={{ fontSize:19, fontWeight:'bold' }}>{activeCase?.title}</div>
-            <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{activeCase?.domain}</div>
+            <div style={{ fontSize: 10, color: C.teal, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1.5 }}>Case {activeCase?.id} · Post-Viva Review</div>
+            <div style={{ fontSize: 19, fontWeight: 'bold' }}>{activeCase?.title}</div>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{activeCase?.domain} · {activeCase?.difficulty}</div>
           </div>
         </div>
-
-        {/* Self-assessment */}
-        <div style={{ background:C.card, borderRadius:10, padding:16, marginBottom:14 }}>
-          <div style={{ fontWeight:'bold', color:C.gold, marginBottom:4, fontSize:14 }}>Self-Assessment</div>
-          <div style={{ color:C.muted, fontSize:12, marginBottom:10 }}>Rate your performance. Updates dashboard instantly.</div>
-          {/* ── SCORE PANEL ─────────────────────────────────────── */}
-          {scoring && (
-            <div style={{ background:C.card, borderRadius:10, padding:16, marginBottom:14, textAlign:'center' }}>
-              <div style={{ color:C.teal, fontWeight:'bold', fontSize:13 }}>⚡ Generating your EDIC score...</div>
-              <div style={{ color:C.muted, fontSize:11, marginTop:4 }}>Analysing transcript against CCS marking criteria</div>
+        {/* AI Score Panel */}
+        {scoring && (
+          <div style={{ background: C.card, borderRadius: 10, padding: 16, marginBottom: 14, textAlign: 'center' }}>
+            <div style={{ color: C.teal, fontWeight: 'bold', fontSize: 13 }}>⚡ Generating your EDIC score...</div>
+            <div style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>Analysing transcript against CCS marking criteria</div>
+          </div>
+        )}
+        {score && !score.error && (
+          <div style={{ background: C.card, borderRadius: 10, padding: 16, marginBottom: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ fontWeight: 'bold', color: C.teal, fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 }}>EDIC Score Report</div>
+              <div style={{ padding: '4px 14px', borderRadius: 20, fontWeight: 'bold', fontSize: 12, background: score.overall?.includes('Pass') && !score.overall?.includes('Borderline') ? '#1a3d1a' : score.overall?.includes('Borderline Pass') ? '#3d3300' : score.overall?.includes('Borderline Fail') ? '#3d1a00' : '#3d0000', color: score.overall?.includes('Pass') && !score.overall?.includes('Borderline') ? C.green : score.overall?.includes('Borderline Pass') ? C.gold : score.overall?.includes('Borderline Fail') ? C.coral : '#FF1744' }}>{score.overall}</div>
             </div>
-          )}
-          {score && !score.error && (
-            <div style={{ background:C.card, borderRadius:10, padding:16, marginBottom:14 }}>
-              {/* Overall verdict */}
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-                <div style={{ fontWeight:'bold', color:C.teal, fontSize:13, textTransform:'uppercase', letterSpacing:1 }}>EDIC Score Report</div>
-                <div style={{ padding:'4px 14px', borderRadius:20, fontWeight:'bold', fontSize:12,
-                  background: score.overall?.includes('Pass') && !score.overall?.includes('Borderline') ? '#1a3d1a' :
-                              score.overall?.includes('Borderline Pass') ? '#3d3300' :
-                              score.overall?.includes('Borderline Fail') ? '#3d1a00' : '#3d0000',
-                  color: score.overall?.includes('Pass') && !score.overall?.includes('Borderline') ? '#4CAF50' :
-                         score.overall?.includes('Borderline Pass') ? C.gold :
-                         score.overall?.includes('Borderline Fail') ? C.coral : '#FF1744'
-                }}>{score.overall}</div>
-              </div>
-              <div style={{ fontSize:11, color:C.muted, marginBottom:14, fontStyle:'italic' }}>{score.rationale}</div>
-
-              {/* Four domain scores */}
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
-                {score.domains?.map((d,i) => (
-                  <div key={i} style={{ background:C.card2, borderRadius:8, padding:10 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                      <div style={{ fontSize:10, color:C.muted, textTransform:'uppercase', letterSpacing:0.8 }}>{d.name}</div>
-                      <div style={{ display:'flex', gap:2 }}>
-                        {[0,1,2].map(s => (
-                          <div key={s} style={{ width:8, height:8, borderRadius:2,
-                            background: s < d.score ? (d.score===3 ? '#4CAF50' : d.score===2 ? C.gold : C.coral) : '#2A4070'
-                          }}/>
-                        ))}
-                      </div>
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: 14, fontStyle: 'italic' }}>{score.rationale}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
+              {score.domains?.map((d, i) => (
+                <div key={i} style={{ background: C.card2, borderRadius: 8, padding: 10 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <div style={{ fontSize: 10, color: C.muted, textTransform: 'uppercase', letterSpacing: 0.8 }}>{d.name}</div>
+                    <div style={{ display: 'flex', gap: 2 }}>
+                      {[0, 1, 2].map(s => <div key={s} style={{ width: 8, height: 8, borderRadius: 2, background: s < d.score ? (d.score === 3 ? C.green : d.score === 2 ? C.gold : C.coral) : '#2A4070' }} />)}
                     </div>
-                    <div style={{ fontSize:11, fontWeight:'bold', color:
-                      d.verdict==='Excellent' ? '#4CAF50' : d.verdict==='Satisfactory' ? C.teal :
-                      d.verdict==='Borderline' ? C.gold : C.coral, marginBottom:4 }}>{d.verdict}</div>
-                    <div style={{ fontSize:10, color:C.muted, lineHeight:1.5 }}>{d.feedback}</div>
                   </div>
-                ))}
+                  <div style={{ fontSize: 11, fontWeight: 'bold', color: d.verdict === 'Excellent' ? C.green : d.verdict === 'Satisfactory' ? C.teal : d.verdict === 'Borderline' ? C.gold : C.coral, marginBottom: 4 }}>{d.verdict}</div>
+                  <div style={{ fontSize: 10, color: C.muted, lineHeight: 1.5 }}>{d.feedback}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div style={{ background: '#0d2d0d', borderRadius: 8, padding: 10 }}>
+                <div style={{ fontSize: 10, color: C.green, fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 6 }}>✓ Done Well</div>
+                {score.strengths?.map((s, i) => <div key={i} style={{ fontSize: 10, color: C.white, marginBottom: 4, lineHeight: 1.4 }}>• {s}</div>)}
               </div>
-
-              {/* Strengths and gaps */}
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                <div style={{ background:'#0d2d0d', borderRadius:8, padding:10 }}>
-                  <div style={{ fontSize:10, color:'#4CAF50', fontWeight:'bold', textTransform:'uppercase', marginBottom:6 }}>✓ Done Well</div>
-                  {score.strengths?.map((s,i) => <div key={i} style={{ fontSize:10, color:C.white, marginBottom:4, lineHeight:1.4 }}>• {s}</div>)}
-                </div>
-                <div style={{ background:'#2d0d0d', borderRadius:8, padding:10 }}>
-                  <div style={{ fontSize:10, color:C.coral, fontWeight:'bold', textTransform:'uppercase', marginBottom:6 }}>⚠ Gaps to Address</div>
-                  {score.gaps?.map((g,i) => <div key={i} style={{ fontSize:10, color:C.white, marginBottom:4, lineHeight:1.4 }}>• {g}</div>)}
-                </div>
+              <div style={{ background: '#2d0d0d', borderRadius: 8, padding: 10 }}>
+                <div style={{ fontSize: 10, color: C.coral, fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 6 }}>⚠ Gaps to Address</div>
+                {score.gaps?.map((g, i) => <div key={i} style={{ fontSize: 10, color: C.white, marginBottom: 4, lineHeight: 1.4 }}>• {g}</div>)}
               </div>
             </div>
-          )}
-          {score?.error && (
-            <div style={{ background:C.card, borderRadius:10, padding:12, marginBottom:14, color:C.muted, fontSize:12 }}>{score.error}</div>
-          )}
-
-          <div style={{ display:'flex', gap:9 }}>
+          </div>
+        )}
+        {score?.error && <div style={{ background: C.card, borderRadius: 10, padding: 12, marginBottom: 14, color: C.muted, fontSize: 12 }}>{score.error}</div>}
+        {/* Self-assessment + SM-2 info */}
+        <div style={{ background: C.card, borderRadius: 10, padding: 16, marginBottom: 14 }}>
+          <div style={{ fontWeight: 'bold', color: C.gold, marginBottom: 4, fontSize: 14 }}>Self-Assessment</div>
+          <div style={{ color: C.muted, fontSize: 12, marginBottom: 10 }}>Rate your performance. Drives your spaced repetition schedule.{srRec && <span style={{ color: C.teal }}> Next review in ~{srRec.interval || 1} day{srRec.interval !== 1 ? 's' : ''}.</span>}</div>
+          <div style={{ display: 'flex', gap: 9 }}>
             {RAG_OPTIONS.map(r => (
               <button key={r.val} onClick={() => saveRag(activeCase.id, r.val)}
-                style={{ flex:1, padding:'11px 6px', borderRadius:8, border:`2px solid ${currentRag===r.val ? r.color : r.color+'30'}`, background: currentRag===r.val ? r.color+'22' : 'transparent', color:r.color, fontWeight:'bold', cursor:'pointer', fontSize:13, transition:'all 0.2s' }}>
+                style={{ flex: 1, padding: '11px 6px', borderRadius: 8, border: `2px solid ${currentRag === r.val ? r.color : `${r.color}30`}`, background: currentRag === r.val ? `${r.color}22` : 'transparent', color: r.color, fontWeight: 'bold', cursor: 'pointer', fontSize: 13, transition: 'all 0.2s' }}>
                 {r.label}
               </button>
             ))}
           </div>
         </div>
-
         {/* Key probes */}
-        <div style={{ background:C.card, borderRadius:10, padding:16, marginBottom:14 }}>
-          <div style={{ fontWeight:'bold', color:C.teal, marginBottom:10, fontSize:14 }}>Key Probes</div>
-          {activeCase?.key_probes.map((p,i) => (
-            <div key={i} style={{ display:'flex', gap:9, marginBottom:8, alignItems:'flex-start' }}>
-              <div style={{ color:C.teal, fontWeight:'bold', minWidth:18, fontSize:12 }}>{i+1}.</div>
-              <div style={{ fontSize:12, lineHeight:1.55 }}>{p}</div>
+        <div style={{ background: C.card, borderRadius: 10, padding: 16, marginBottom: 14 }}>
+          <div style={{ fontWeight: 'bold', color: C.teal, marginBottom: 10, fontSize: 14 }}>Key Probes</div>
+          {activeCase?.key_probes.map((p, i) => (
+            <div key={i} style={{ display: 'flex', gap: 9, marginBottom: 8, alignItems: 'flex-start' }}>
+              <div style={{ color: C.teal, fontWeight: 'bold', minWidth: 18, fontSize: 12 }}>{i + 1}.</div>
+              <div style={{ fontSize: 12, lineHeight: 1.55 }}>{p}</div>
             </div>
           ))}
         </div>
-
         {/* Pearls */}
-        <div style={{ background:C.pearlBg, borderLeft:`4px solid ${C.teal}`, borderRadius:10, padding:16, marginBottom:14 }}>
-          <div style={{ fontWeight:'bold', color:C.teal, marginBottom:10, fontSize:12, textTransform:'uppercase', letterSpacing:1 }}>ICU Pearls</div>
-          {activeCase?.pearls?.map((p,i) => (
-            <div key={i} style={{ display:'flex', gap:9, marginBottom:8, alignItems:'flex-start' }}>
-              <div style={{ color:C.teal, fontSize:13, flexShrink:0, marginTop:2 }}>◆</div>
-              <div style={{ fontSize:12, lineHeight:1.6 }}>{p}</div>
+        <div style={{ background: C.pearlBg, borderLeft: `4px solid ${C.teal}`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
+          <div style={{ fontWeight: 'bold', color: C.teal, marginBottom: 10, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }}>ICU Pearls</div>
+          {activeCase?.pearls?.map((p, i) => (
+            <div key={i} style={{ display: 'flex', gap: 9, marginBottom: 8, alignItems: 'flex-start' }}>
+              <div style={{ color: C.teal, fontSize: 13, flexShrink: 0, marginTop: 2 }}>◆</div>
+              <div style={{ fontSize: 12, lineHeight: 1.6 }}>{p}</div>
             </div>
           ))}
         </div>
-
         {/* Pitfalls */}
-        <div style={{ background:C.dangerBg, borderLeft:`4px solid ${C.coral}`, borderRadius:10, padding:16, marginBottom:20 }}>
-          <div style={{ fontWeight:'bold', color:C.coral, marginBottom:10, fontSize:12, textTransform:'uppercase', letterSpacing:1 }}>Pitfalls</div>
-          {activeCase?.pitfalls?.map((p,i) => (
-            <div key={i} style={{ display:'flex', gap:9, marginBottom:8, alignItems:'flex-start' }}>
-              <div style={{ color:C.coral, fontSize:13, flexShrink:0, marginTop:2 }}>⚠</div>
-              <div style={{ fontSize:12, lineHeight:1.6 }}>{p}</div>
+        <div style={{ background: C.dangerBg, borderLeft: `4px solid ${C.coral}`, borderRadius: 10, padding: 16, marginBottom: 20 }}>
+          <div style={{ fontWeight: 'bold', color: C.coral, marginBottom: 10, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }}>Pitfalls</div>
+          {activeCase?.pitfalls?.map((p, i) => (
+            <div key={i} style={{ display: 'flex', gap: 9, marginBottom: 8, alignItems: 'flex-start' }}>
+              <div style={{ color: C.coral, fontSize: 13, flexShrink: 0, marginTop: 2 }}>⚠</div>
+              <div style={{ fontSize: 12, lineHeight: 1.6 }}>{p}</div>
             </div>
           ))}
         </div>
-
-        <div style={{ display:'flex', gap:9 }}>
-          <button onClick={() => startViva(activeCase)} style={{ flex:1, padding:12, borderRadius:8, border:`1px solid ${C.teal}60`, background:'transparent', color:C.teal, fontWeight:'bold', cursor:'pointer', fontSize:13 }}>↻ Redo</button>
-          {nextCase && <button onClick={() => startViva(nextCase)} style={{ flex:1, padding:12, borderRadius:8, border:`1px solid ${C.gold}60`, background:C.gold+'15', color:C.gold, fontWeight:'bold', cursor:'pointer', fontSize:13 }}>Next → Case {nextCase.id}</button>}
-          <button onClick={() => setView('dashboard')} style={{ flex:1, padding:12, borderRadius:8, border:'none', background:C.teal, color:C.dark, fontWeight:'bold', cursor:'pointer', fontSize:13 }}>← Dashboard</button>
+        <div style={{ display: 'flex', gap: 9 }}>
+          <button onClick={() => startViva(activeCase)} style={{ flex: 1, padding: 12, borderRadius: 8, border: `1px solid ${C.teal}60`, background: 'transparent', color: C.teal, fontWeight: 'bold', cursor: 'pointer', fontSize: 13 }}>↻ Redo</button>
+          {nextCase && <button onClick={() => startViva(nextCase)} style={{ flex: 1, padding: 12, borderRadius: 8, border: `1px solid ${C.gold}60`, background: `${C.gold}15`, color: C.gold, fontWeight: 'bold', cursor: 'pointer', fontSize: 13 }}>Next → Case {nextCase.id}</button>}
+          <button onClick={() => setView('dashboard')} style={{ flex: 1, padding: 12, borderRadius: 8, border: 'none', background: C.teal, color: C.dark, fontWeight: 'bold', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
         </div>
       </div>
     );
   }
-
   return null;
 }
